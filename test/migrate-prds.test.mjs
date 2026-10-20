@@ -45,7 +45,7 @@ test('imports active and historical archives, preserves attachments and source, 
   const prd = read(root, `${pending.destination}/prd.md`);
   assert.match(prd, /\[asset\]\(media\/a.bin\)/);
   const external = /\[rule\]\(([^#]+)#scope\)/.exec(prd)[1];
-  assert.equal(path.resolve(root, pending.destination, external), path.resolve(root, '.trellis/spec/rule.md'));
+  assert.equal(path.resolve(root, pending.destination, external), path.resolve(root, '.neo-trellis/spec/rule.md'));
   assert.equal(read(root, '.trellis/tasks/pending/prd.md'), '[asset](media/a.bin) [rule](../../spec/rule.md#scope)');
   assert.equal(applyPlan(root, plan).changed, 0, 'binary writes are idempotent');
 });
@@ -92,6 +92,19 @@ test('same task names in different archive months have unique destinations', t =
   assert.throws(() => planMigration(root), /destination already exists/);
 });
 
+test('legacy completion aliases normalize without fabricating acceptance', t => {
+  const root = fixture(t);
+  for (const status of ['done', 'complete', 'cancelled', 'canceled', 'superseded']) task(root, status, status);
+  const imported = records(planMigration(root));
+  assert.equal(imported.length, 5);
+  for (const entry of imported) {
+    assert.ok(entry.destination.includes('/archive/'));
+    assert.equal(entry.acceptance, 'not verified by migration');
+  }
+  assert.equal(imported.find(r => r.originalStatus === 'done').normalizedStatus, 'completed');
+  assert.equal(imported.find(r => r.originalStatus === 'canceled').normalizedStatus, 'cancelled');
+});
+
 test('link relocation preserves code examples and handles reference links', t => {
   const root = fixture(t);
   const example = '[rule](../../spec/rule.md)';
@@ -102,7 +115,7 @@ test('link relocation preserves code examples and handles reference links', t =>
   const text = plan.writes.get(`${entry.destination}/prd.md`);
   assert.ok(text.startsWith(code));
   const target = /\[rule\]: (.+)/.exec(text)[1];
-  assert.equal(path.resolve(root, entry.destination, target), path.resolve(root, '.trellis/spec/rule.md'));
+  assert.equal(path.resolve(root, entry.destination, target), path.resolve(root, '.neo-trellis/spec/rule.md'));
 });
 
 test('symlink attachments are rejected before any mutation', t => {

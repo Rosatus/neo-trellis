@@ -15,6 +15,10 @@
     ".claude/skills/neo-trellis-prd/SKILL.md": "07685d969c20d6c230904d9487960a308ef8171344553a7299631494f18b4879",
     ".neo-trellis/skills/prd.md": "66180e09e243a1cc0fa73ec9cb7d41e07a292add2c1a25eca23c52c9f1925f68",
     ".agents/skills/neo-trellis-prd/SKILL.md": "07685d969c20d6c230904d9487960a308ef8171344553a7299631494f18b4879",
-    ".pi/skills/neo-trellis-prd/SKILL.md": "07685d969c20d6c230904d9487960a308ef8171344553a7299631494f18b4879"
+    ".pi/skills/neo-trellis-prd/SKILL.md": "07685d969c20d6c230904d9487960a308ef8171344553a7299631494f18b4879",
+    ".claude/skills/neo-trellis-migrate/SKILL.md": "e625020175da2b17a504fc1e5e47af2e307c2d5e1aa4676d36073cbd112db663",
+    ".neo-trellis/skills/migrate.md": "10aeed84d813f2d75c4931a857177a341598683a9f594e205fe5ce562ee5d3f1",
+    ".agents/skills/neo-trellis-migrate/SKILL.md": "e625020175da2b17a504fc1e5e47af2e307c2d5e1aa4676d36073cbd112db663",
+    ".pi/skills/neo-trellis-migrate/SKILL.md": "e625020175da2b17a504fc1e5e47af2e307c2d5e1aa4676d36073cbd112db663"
   }
 }

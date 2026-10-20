@@ -13,7 +13,7 @@ CLAUDE.md                         Claude 的同源通用路由（选择 Claude �
   modules/                        模块职责、关键路径、局部规则与易错点
   spec/                           跨模块契约
   research/                       可选的证据、实验、决策理由
-  legacy.md                       迁移后指向保留的 Trellis 知识
+  legacy.md                       迁移后指向新目录中的知识副本与范围地图
   runtime/session.mjs             自包含的短入口 hook
   manifest.json                   安装平台与受管理文件指纹
 ```
@@ -104,15 +104,15 @@ neo-trellis doctor
 不传 `--yes` 时 `migrate` 也只预览。迁移会：
 
 1. 在 `.neo-trellis-backups/<唯一标识>/` 备份被替换或移除的文件及目录，保存备份清单；该目录自动加入 .gitignore。
-2. 原样保留 `.trellis/spec/`、`research/`、`workspace/`、`tasks/`，通过 `legacy.md` 引用；另外将可识别的 PRD 资料复制到新 PRD 目录，规则见下文。
+2. 将 backend/frontend 及已声明 package 的范围规范复制到 `modules/<范围>/`，其余 spec 复制到 `spec/`，research 复制到 `research/`，workspace 复制到 `history/workspace/`（均在 `.neo-trellis/` 下）。原件保留作核对和恢复，新副本是后续维护入口。
 3. 停用支持平台上的明确 Trellis hooks、skills、agents、命令和 Pi extension，保留其他用户配置。
 4. 移除旧 `workflow.md`、`.version` 和 `scripts/` 执行层，安装 neo-trellis 的入口和集成。
 
 PRD 导入包含 `.trellis/tasks/<任务>/prd.md` 和 `tasks/archive/YYYY-MM/<任务>/prd.md`：
 
-- `planning`、`in_progress`、`review` 导入 `prds/active/`；明确 `completed` 或无冲突的历史归档导入 `prds/archive/`。
-- 非归档任务缺少状态、状态与归档位置冲突、`task.json` 损坏、没有 PRD 或不支持的归档目录布局，会在预览中说明并保留原位。
-- 复制任务资料及二进制附件；常规 Markdown 外部相对链接调整为指向保留的原始资料。代码示例、复杂链接、HTML 和 JSON 中的路径不自动改写，预览提醒核对。
+- `planning`、`in_progress`、`review` 导入 `prds/active/`；`completed`、`done`、`complete` 或无冲突的历史归档导入 `prds/archive/`。`cancelled`、`canceled`、`superseded` 也归档，但不视为完成。导入账本记录原状态及规范化状态，原 task.json 不伪造验收结论。
+- 非归档任务缺少状态、状态与归档位置冲突、`task.json` 损坏、没有 PRD 或不支持的归档目录布局，会在预览中说明；资料完整复制到 `history/tasks/`，不丢弃、不强行分类成 PRD。
+- 不按大小过滤日志和二进制附件。常规 Markdown 相对链接指向对应新副本；Markdown/JSON/JSONL/TXT 中指向已复制资料的字面 `.trellis/…` 路径同步改写。代码示例中的相对链接、复杂链接、绝对路径和非文档文件内容不保证自动改写，需要核对报告及外部引用。
 - `prds/trellis-imports.json` 记录来源、初始目标、原状态和内容指纹。它是一次性导入账本，不是当前任务状态表；归档后初始目标可能不再是现址。重复迁移不覆盖已导入内容、不恢复已移动或删除的副本，旧源发生变化时提示手工核对。目标冲突时停止。
 - 历史确认和验收均标记为未经迁移验证。迁移不重新 grill、不补造验收、不自动继续旧工作；实际恢复开发时才澄清相关缺口。
 
@@ -122,7 +122,11 @@ PRD 导入包含 `.trellis/tasks/<任务>/prd.md` 和 `tasks/archive/YYYY-MM/<�
 
 应用中的普通文件错误会尝试回滚；断电或进程被强杀无法保证自动回滚，备份仍可用于恢复。恢复时依据备份 `manifest.json`：`existing` 是有原件备份的路径，`paths` 中其余路径是本次新增项。先停止宿主并核对这些路径，避免覆盖迁移后新工作。
 
-迁移保留旧知识原位是刻意选择：自动改写所有历史链接容易损坏依据。后续 agent 在实际接触模块时，将当前有用的契约整合到新模块入口，不需要一次性重写历史。
+`migration/trellis-knowledge.json` 是知识副本的逐文件来源账本；原件变化不覆盖新副本。0.1.0 导入的 PRD 若仍与当时输出完全一致，可自动升级旧链接；已修改、移动或删除的副本保留现状。
+
+`map.md` 列出规范入口，routes.json 增量合并路径映射。优先识别 config.yaml 的普通 block-style `packages/<name>/path` 声明；否则从 index.md 和 directory-structure.md 提取实际存在的路径，明确标记为文档引用、范围待核对。不会仅根据 backend/frontend 名字推断目录。没有证据的规范只列入导航，不伪造路由。已有用户地图、路由及导入地图不会整体重建覆盖。
+
+旧 workflow、delegation、validation 等执行方法不迁移为现行规则。`migration/trellis-report.json` 记录复制映射、范围依据、缺失副本及迁移文档内残余旧路径。这不是全仓库引用检查：删除 `.trellis/` 前还需确认其他宿主集成、外部脚本和未迁移文档不再依赖它。迁移器不会整体删除旧目录。
 
 ## 更新与验证
 
@@ -140,3 +144,5 @@ npm pack --dry-run
 ## 设计来源与许可
 
 借鉴 Trellis 的持久规范、范围上下文和保留用户配置实践，以及 mini-trellis 的短入口、按需知识、事实/推断区分和写入回读原则。删除阶段状态机、固定代理链、自动日志提交和私人会话解析；实现独立的 Node 运行链。采用 AGPL-3.0-only，见 LICENSE 和 NOTICE。
+
+迁移后的语义整理使用 neo-trellis-migrate skill：CLI 生成正式目录和 map.md 初始入口，skill 核对模块命名、全局契约、旧工作流说明及引用。不建立来源品牌子目录；migration/ 仅保存账本与审核记录。CLI 完成不等于语义审核完成。

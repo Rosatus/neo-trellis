@@ -7,6 +7,10 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const cli = fileURLToPath(new URL('../bin/neo-trellis.mjs', import.meta.url));
+test('CLI version comes from package metadata', () => {
+  const expected = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version;
+  assert.equal(spawnSync(process.execPath, [cli, '--version'], { encoding: 'utf8' }).stdout.trim(), expected);
+});
 function fixture(t) { const root = fs.mkdtempSync(path.join(os.tmpdir(), 'neo-cli-')); t.after(() => fs.rmSync(root, { recursive: true, force: true })); return root; }
 function run(root, ...args) { return spawnSync(process.execPath, [cli, ...args, '--cwd', root], { encoding: 'utf8' }); }
 function put(root, name, text) { const dest = path.join(root, name); fs.mkdirSync(path.dirname(dest), { recursive: true }); fs.writeFileSync(dest, text); }
@@ -38,6 +42,9 @@ test('migration preview does not mutate; apply preserves sources, backs up runti
   assert.equal(run(root, 'init', '--claude').status, 1);
   const preview = run(root, 'migrate', '--claude');
   assert.equal(preview.status, 0, preview.stderr);
+  assert.match(preview.stdout, /filesToWrite/);
+  assert.doesNotMatch(preview.stdout, /attachment\.bin/);
+  assert.match(run(root, 'migrate', '--claude', '--verbose').stdout, /attachment\.bin/);
   assert.equal(fs.existsSync(path.join(root, '.neo-trellis')), false);
   const applied = run(root, 'migrate', '--claude', '--yes');
   assert.equal(applied.status, 0, applied.stderr);

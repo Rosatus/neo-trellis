@@ -13,3 +13,4 @@
 易错点：迁移可能将只有旧管理块的 AGENTS.md 标记为移除。安装器必须把它视为空内容，不能重新读取原文件而复活旧工作流。
 
 验证：test/install.test.mjs 覆盖幂等、配置保留、备份及失败回滚；test/cli.test.mjs 覆盖真实 CLI 初始化与迁移。
+- 0.2.0: CLI 版本读取 package.json；迁移摘要默认隐藏完整文件清单，--verbose 展开。doctor 忽略 Markdown 代码示例并解析链接编码/锚点。

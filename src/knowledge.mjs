@@ -6,6 +6,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { markdownLinks } from './markdown.mjs';
 
 export const KNOWLEDGE_DIR = '.neo-trellis';
 export const MAP_PATH = `${KNOWLEDGE_DIR}/map.md`;
@@ -48,6 +49,10 @@ PRDs live in \`.neo-trellis/prds/\`; load only the one relevant to the current
 task. Ordinary small fixes do not require this process.
 
 ## Knowledge layers
+
+For Trellis migration or post-import cleanup, follow the neo-trellis-migrate
+skill at \`.neo-trellis/skills/migrate.md\`. Normal development uses map.md
+directly; import reports are provenance, not an additional knowledge hierarchy.
 
 - \`.neo-trellis/modules/\` — per-module: purpose, key entry points, code paths,
   local constraints, and counter-intuitive traps.
@@ -297,10 +302,12 @@ export function inspectKnowledge(root) {
   for (const file of mdFiles) {
     const rel = path.relative(absRoot, file);
     const text = fs.readFileSync(file, 'utf8');
-    for (const match of text.matchAll(MD_LINK_RE)) {
-      const target = match[1];
+    for (const target of markdownLinks(text)) {
       if (EXTERNAL_LINK_RE.test(target)) continue;
-      const resolved = path.resolve(path.dirname(file), target);
+      let decoded;
+      try { decoded = decodeURIComponent(target.split(/[?#]/)[0]); }
+      catch { warnings.push({ file: rel, message: `link '${target}' has invalid URL encoding` }); continue; }
+      const resolved = path.resolve(path.dirname(file), decoded);
       if (!isInside(resolved, absRoot)) {
         errors.push({ file: rel, message: `link '${target}' escapes project root` });
       } else if (!fs.existsSync(resolved)) {

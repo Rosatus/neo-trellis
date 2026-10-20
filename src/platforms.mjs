@@ -5,6 +5,7 @@
 
 import { KNOWLEDGE_SKILL } from "./knowledge.mjs";
 import { PRD_SKILL, PRD_SKILL_MD } from "./prd.mjs";
+import { MIGRATION_SKILL, MIGRATION_SKILL_MD } from './migration-skill.mjs';
 
 const RUNTIME_PATH = ".neo-trellis/runtime/session.mjs";
 const HOOK_COMMAND = `node ${RUNTIME_PATH}`;
@@ -173,6 +174,8 @@ export function platformFiles(platform) {
     [skillPath]: SKILL_MD,
     [skillPath.replace('/neo-trellis/', '/neo-trellis-prd/')]: PRD_SKILL_MD,
     '.neo-trellis/skills/prd.md': PRD_SKILL,
+    [skillPath.replace('/neo-trellis/', '/neo-trellis-migrate/')]: MIGRATION_SKILL_MD,
+    '.neo-trellis/skills/migrate.md': MIGRATION_SKILL,
     '.neo-trellis/skills/knowledge.md': KNOWLEDGE_SKILL,
     [RUNTIME_PATH]: SESSION_RUNTIME,
   };

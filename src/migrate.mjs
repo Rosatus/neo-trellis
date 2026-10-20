@@ -8,9 +8,10 @@
  * own backup step if they want one).
  *
  * Policy:
- * - `.trellis/` knowledge (spec, research, workspace, tasks) is kept in
- *   place as legacy sources. A `.neo-trellis/legacy.md` index is generated
- *   linking to it. Recognized PRD bundles are additionally copied into prds/.
+ * - `.trellis/` knowledge (spec, research, workspace, tasks) is copied into
+ *   `.neo-trellis/` with provenance, navigation and a reference audit.
+ *   Original sources stay in place for comparison/recovery; old workflow
+ *   policies are not promoted into the new knowledge layer.
  * - Old execution wiring is disabled: `.trellis/workflow.md`,
  *   `.trellis/.version`, `.trellis/scripts/` (backed up and removed by
  *   the installer), managed `<!-- TRELLIS:* -->` blocks in
@@ -36,6 +37,7 @@ import {
 } from "node:fs";
 import path from "node:path";
 import { planPrdImports } from './migrate-prds.mjs';
+import { planKnowledgeImports } from './migrate-knowledge.mjs';
 
 /** Hook script basenames emitted by classic Trellis per platform. */
 const TRELLIS_HOOK_SCRIPTS = [
@@ -789,69 +791,14 @@ export function planMigration(root) {
     );
   }
 
-  // 7. Legacy index into the preserved knowledge tree. Old spec remains
-  // an active constraint source until superseded; tasks/research are
-  // historical evidence. Links are real markdown links relative to
-  // `.neo-trellis/legacy.md` so agents can navigate straight to the files.
-  const legacySections = [];
-  const legacyLinks = [
-    [
-      "spec",
-      "package- and layer-scoped coding rules — still authoritative; " +
-        "read the relevant spec before editing code in its scope. " +
-        "Stays in force until a neo-trellis spec explicitly supersedes it.",
-    ],
-    [
-      "research",
-      "historical research notes and decision rationale — evidence, " +
-        "not current contracts",
-    ],
-    [
-      "workspace",
-      "historical per-developer journals and session traces",
-    ],
-    [
-      "tasks",
-      "original tasks and archives; imported PRDs are indexed in .neo-trellis/prds/trellis-imports.json when present",
-    ],
-  ];
-  for (const [d, desc] of legacyLinks) {
-    if (hasDir(root, `.trellis/${d}`) || hasFile(root, `.trellis/${d}`)) {
-      legacySections.push(`- [\`.trellis/${d}/\`](../.trellis/${d}/) — ${desc}`);
-    }
-  }
-  if (hasDir(root, ".trellis/agents")) {
-    legacySections.push(
-      "- [`.trellis/agents/`](../.trellis/agents/) — archived sub-agent " +
-        "prompts kept for reference",
-    );
-  }
-  const legacyMd = [
-    "# Legacy Trellis sources",
-    "",
-    "This project was migrated from classic Trellis to neo-trellis.",
-    "The original `.trellis/` knowledge tree is preserved verbatim.",
-    "",
-    "**Old spec stays in force.** `.trellis/spec/` rules remain valid",
-    "constraints and should be read before touching code in their scope,",
-    "until a `.neo-trellis/` spec explicitly supersedes them. Tasks,",
-    "workspace journals, and research are historical records — useful",
-    "evidence, but not current contracts.",
-    "",
-    ...legacySections,
-    "",
-    "The old workflow engine (workflow.md, scripts, hooks, platform",
-    "commands and trellis-* agents/skills) was backed up and removed",
-    "during migration. New contracts and the project map live under",
-    "`.neo-trellis/`.",
-    "",
-  ].join("\n");
-  write(".neo-trellis/legacy.md", legacyMd);
+  // 7. Copy retained knowledge and evidence into the new tree, then build
+  // navigation and audit unresolved references. Original sources stay intact.
+  const prds = planPrdImports(root, plan);
+  planKnowledgeImports(root, plan, prds);
 
-  planPrdImports(root, plan);
   notes.push(
     `Trellis evidence: ${trellisEvidence.join(", ")}`,
-    "knowledge tree kept in place under .trellis/ (see .neo-trellis/legacy.md)",
+    "knowledge copied into .neo-trellis/; original .trellis/ sources retained for comparison and recovery",
   );
 
   return plan;

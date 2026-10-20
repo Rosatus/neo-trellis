@@ -15,15 +15,15 @@ const HELP = `neo-trellis — scoped project knowledge
   route [paths...]                 Find knowledge for project-relative source paths
   status                          Show changed Git paths and their knowledge routes
 
-Options: --cwd <directory>  --dry-run  --yes  --help  --version
+Options: --cwd <directory>  --dry-run  --yes  --verbose  --help  --version
 Migration previews by default. Use --yes to apply after reviewing the plan.
 Init never overwrites knowledge or locally modified managed integration files.
 No automatic commits, task creation or transcript collection.
 `;
 export async function main(argv) {
   const { values, positionals } = parseArgs({ args: argv, allowPositionals: true, strict: true,
-    options: Object.fromEntries(['codex', 'claude', 'pi', 'dry-run', 'yes', 'help', 'version'].map(key => [key, { type: 'boolean' }]).concat([['cwd', { type: 'string' }]])) });
-  if (values.version) { console.log('0.1.0'); return; }
+    options: Object.fromEntries(['codex', 'claude', 'pi', 'dry-run', 'yes', 'verbose', 'help', 'version'].map(key => [key, { type: 'boolean' }]).concat([['cwd', { type: 'string' }]])) });
+  if (values.version) { console.log(JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version); return; }
   if (values.help || !positionals.length) { console.log(HELP); return; }
   const [command, ...args] = positionals;
   let root = path.resolve(values.cwd ?? process.cwd());
@@ -41,14 +41,29 @@ export async function main(argv) {
     const base = command === 'migrate' ? planMigration(root) : undefined;
     const plan = planInstall(root, selected, base);
     const changed = [...plan.writes].filter(([name, text]) => !contentMatches(root, name, text));
-    console.log(JSON.stringify({ command, root, write: changed.map(([name]) => name), remove: plan.removals, notes: plan.notes }, null, 2));
+    const report = command === 'migrate' ? JSON.parse(plan.writes.get('.neo-trellis/migration/trellis-report.json')) : null;
+    const currentReferences = report?.remainingReferences.filter(r => r.category === 'current-knowledge') ?? [];
+    const prds = JSON.parse(plan.writes.get('.neo-trellis/prds/trellis-imports.json') ?? '{"records":[]}').records;
+    const output = command === 'migrate' && !values.verbose ? {
+      command, root, summary: { filesToWrite: changed.length, bytesToWrite: changed.reduce((n, [, data]) => n + Buffer.byteLength(data), 0),
+        activePrds: prds.filter(r => r.destination.includes('/active/')).length,
+        archivedPrds: prds.filter(r => r.destination.includes('/archive/')).length,
+        currentKnowledgeReferences: currentReferences.length,
+        historicalReferences: report.remainingReferences.length - currentReferences.length },
+      remove: plan.removals, currentReferences,
+      notes: plan.notes.filter(n => !n.startsWith('PRD import ') && !n.startsWith('PRD already imported;')),
+      details: 'Use --verbose for full file and note lists. Applying writes migration/trellis-report.json; preview writes nothing.'
+    } : { command, root, write: changed.map(([name]) => name), remove: plan.removals, notes: plan.notes };
+    console.log(JSON.stringify(output, null, 2));
     if (values['dry-run'] || (command === 'migrate' && !values.yes)) {
       console.log(command === 'migrate' ? 'Preview only. Re-run with --yes to apply; all replaced/removed files will be backed up.' : 'Preview only; no files written.');
       return;
     }
     const result = applyPlan(root, plan);
     console.log(`Applied ${result.changed} changes.${result.backup ? ` Backup: ${result.backup}` : ''}`);
-    console.log('Next: ask the agent to map the relevant module into .neo-trellis/map.md and routes.json. Restart the host; approve hooks if requested. Run neo-trellis doctor.');
+    console.log(command === 'migrate'
+      ? `Files migrated. ${currentReferences.length} current knowledge documents retain old references. Initial routes are available; use neo-trellis-migrate for pending semantic scope review. Original .trellis remains. Run neo-trellis doctor.`
+      : 'Next: ask the agent to map the relevant module into .neo-trellis/map.md and routes.json. Restart the host; approve hooks if requested. Run neo-trellis doctor.');
     return;
   }
   if (command === 'doctor') {

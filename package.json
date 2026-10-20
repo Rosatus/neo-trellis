@@ -1,16 +1,45 @@
 {
   "name": "neo-trellis",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Portable, scoped project knowledge for Codex, Claude Code and Pi",
   "type": "module",
   "license": "AGPL-3.0-only",
-  "repository": { "type": "git", "url": "git+https://github.com/Rosatus/neo-trellis.git" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Rosatus/neo-trellis.git"
+  },
   "homepage": "https://github.com/Rosatus/neo-trellis#readme",
-  "bugs": { "url": "https://github.com/Rosatus/neo-trellis/issues" },
-  "keywords": ["codex", "claude-code", "pi", "agent", "project-knowledge", "prd"],
-  "publishConfig": { "access": "public", "registry": "https://registry.npmjs.org/" },
-  "engines": { "node": ">=20" },
-  "bin": { "neo-trellis": "bin/neo-trellis.mjs" },
-  "files": ["bin", "src", "README.md", "LICENSE", "NOTICE"],
-  "scripts": { "test": "node --test", "check": "node --check bin/neo-trellis.mjs && node --test", "prepublishOnly": "npm run check" }
+  "bugs": {
+    "url": "https://github.com/Rosatus/neo-trellis/issues"
+  },
+  "keywords": [
+    "codex",
+    "claude-code",
+    "pi",
+    "agent",
+    "project-knowledge",
+    "prd"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "bin": {
+    "neo-trellis": "bin/neo-trellis.mjs"
+  },
+  "files": [
+    "bin",
+    "src",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "scripts": {
+    "test": "node --test",
+    "check": "node --check bin/neo-trellis.mjs && node --test",
+    "prepublishOnly": "npm run check"
+  }
 }

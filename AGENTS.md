@@ -35,6 +35,10 @@ task. Ordinary small fixes do not require this process.
 
 ## Knowledge layers
 
+For Trellis migration or post-import cleanup, follow the neo-trellis-migrate
+skill at `.neo-trellis/skills/migrate.md`. Normal development uses map.md
+directly; import reports are provenance, not an additional knowledge hierarchy.
+
 - `.neo-trellis/modules/` — per-module: purpose, key entry points, code paths,
   local constraints, and counter-intuitive traps.
 - `.neo-trellis/spec/` — cross-module contracts and stable rules.

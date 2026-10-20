@@ -6,6 +6,7 @@ import path from 'node:path';
 import { planInstall } from '../src/install.mjs';
 import { applyPlan, read, safePath } from '../src/storage.mjs';
 import { PRD_SKILL_MD, PRD_SKILL } from '../src/prd.mjs';
+import { MIGRATION_SKILL_MD } from '../src/migration-skill.mjs';
 
 function fixture(t) { const root = fs.mkdtempSync(path.join(os.tmpdir(), 'neo-install-')); t.after(() => fs.rmSync(root, { recursive: true, force: true })); return root; }
 test('PRD skill installs on all hosts and reinit preserves user PRDs', t => {
@@ -13,6 +14,7 @@ test('PRD skill installs on all hosts and reinit preserves user PRDs', t => {
   applyPlan(root, planInstall(root, ['codex', 'claude', 'pi']));
   for (const dir of ['.agents', '.claude', '.pi']) {
     assert.equal(read(root, `${dir}/skills/neo-trellis-prd/SKILL.md`), PRD_SKILL_MD);
+    assert.equal(read(root, `${dir}/skills/neo-trellis-migrate/SKILL.md`), MIGRATION_SKILL_MD);
   }
   assert.equal(read(root, '.neo-trellis/skills/prd.md'), PRD_SKILL);
   for (const state of ['drafts', 'active', 'archive']) {

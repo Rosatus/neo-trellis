@@ -80,8 +80,8 @@ test("basic plan removes runtime, keeps knowledge, writes legacy index", () => {
 
   const legacy = writes.get(".neo-trellis/legacy.md");
   // real relative links so agents can navigate to legacy sources
-  assert.ok(legacy.includes("[`.trellis/spec/`](../.trellis/spec/)"));
-  assert.ok(legacy.includes("[`.trellis/tasks/`](../.trellis/tasks/)"));
+  assert.ok(legacy.includes("[spec/](spec/)"));
+  assert.ok(legacy.includes("[Unclassified task evidence](history/tasks/)"));
   // old spec stays authoritative until superseded — not demoted to history
   assert.ok(legacy.includes("still authoritative"));
   assert.ok(legacy.includes("supersedes"));

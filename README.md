@@ -26,7 +26,7 @@ neo-trellis 把这些信息放进项目里的 Markdown 和路径索引，让 age
 - **把需求落实到验收。** 先澄清、确认 PRD，再开发；有验收证据后归档。
 - **支持已有项目。** 增量初始化，保留用户配置，也能从原版 Trellis 导入知识和 PRD。
 
-核心由 **两个 skill、轻量宿主入口和一个 CLI** 组成。执行计划、工具调用和会话管理继续由你使用的 agent 宿主负责。
+核心由 **两个日常 skill 和一个迁移 skill、轻量宿主入口和一个 CLI** 组成。执行计划、工具调用和会话管理继续由你使用的 agent 宿主负责。
 
 ## 快速开始
 
@@ -78,11 +78,12 @@ neo-trellis init --codex
 
 地图是导航，代码是实现事实，spec 是应当遵守的契约。三者冲突时，agent 应核对并解决冲突；不能仅凭一份文档就认定实现正确。
 
-### 两个 skill，各司其职
+### 两个日常 skill 和一个迁移 skill，各司其职
 
 | Skill | 何时使用 | 负责什么 |
 |---|---|---|
 | `neo-trellis` | 进入项目或新代码范围、修改相关实现时 | 按范围加载知识，维护事实与契约，记录有证据的纠正 |
+| `neo-trellis-migrate` | 迁移或导入后的整理 | 核对模块边界、全局契约、残余依赖与删除条件 |
 | `neo-trellis-prd` | 接收产品需求、继续或完成某个 PRD 时 | grill 澄清、用户确认、正式落盘、验收归档 |
 
 日常小修复不必创建 PRD，也不需要手动调用 remember 或 recall。
@@ -132,13 +133,19 @@ npx neo-trellis doctor
 
 | 旧项目内容 | 迁移结果 |
 |---|---|
-| spec、research、workspace | 保留原位，通过 `legacy.md` 导航 |
+| spec、research、workspace | 复制到新知识与历史目录，原件保留供核对 |
 | 待实现、进行中或 review 的 PRD | 复制到 `prds/active/` |
 | 明确完成或无状态冲突的历史归档 PRD | 复制到 `prds/archive/` |
-| 缺少 PRD、元数据损坏或状态不明 | 保留原位，在预览中说明 |
+| 缺少 PRD、元数据损坏或状态不明 | 资料完整复制到 `history/tasks/`，不猜测任务状态 |
 | 旧 task 执行配置 | 作为历史资料保留，不恢复任务引擎 |
 
-原始任务和附件保留；重复迁移不会覆盖已导入后修改的 PRD。历史归档不代表重新通过验收，迁移也不会自动恢复旧工作。
+兼容 `done`、`complete` → `completed`，保留原状态；大日志与二进制附件完整迁移，不按大小过滤。重复迁移不会覆盖导入后修改的知识与 PRD。历史归档不代表重新通过验收，迁移也不会自动恢复旧工作。
+
+原 backend/frontend 与已声明 package 的范围知识进入 `.neo-trellis/modules/<范围>/`，其他 spec 进入 `.neo-trellis/spec/`，research 进入 `research/`，workspace 进入 `history/workspace/`。迁移会生成规范导航和初始代码路由：优先读取旧 package 路径，其他范围根据规范入口及目录结构文档中实际存在的路径建立，并标记为待核对的引用关系。不凭 backend/frontend 名字猜代码目录。
+
+可识别的文档链接和指向已复制资料的项目相对路径会改写到新位置。`.neo-trellis/migration/trellis-report.json` 记录来源映射、范围依据、仍引用旧文件的位置和未覆盖的来源变化。旧 workflow、委派与验证策略不迁移为现行规则。
+
+目标是让新目录成为唯一维护入口，逐步弃用 `.trellis/`。迁移不会直接删除整个旧目录；报告只审计迁移资料，不能代替对其他宿主集成、业务脚本和外部工具的引用核对。完成核对后可以单独移除旧目录。
 
 备份位于 `.neo-trellis-backups/`。自定义脚本引用、复杂跨目录链接和其他宿主的集成需要核对；详见[迁移与恢复参考](https://github.com/Rosatus/neo-trellis/blob/main/docs/reference.md#从-trellis-迁移)。
 
@@ -154,6 +161,8 @@ npx neo-trellis doctor
 | `status` | 将 Git 工作区的变化匹配到知识范围 |
 
 通用选项：`--cwd <目录>`、`--help`、`--version`。安装和迁移支持 `--dry-run`；迁移默认只预览，`--yes` 才应用。
+
+迁移默认展示文件数量、体积、PRD 分类、删除项和现行知识残余引用；加 `--verbose` 查看完整清单。报告将现行知识与历史记录分开，历史路径提及不等同于仍在执行的依赖。
 
 更新 CLI 后，在项目中刷新集成：
 
