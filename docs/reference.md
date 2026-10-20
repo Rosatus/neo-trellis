@@ -140,4 +140,3 @@ npm pack --dry-run
 ## 设计来源与许可
 
 借鉴 Trellis 的持久规范、范围上下文和保留用户配置实践，以及 mini-trellis 的短入口、按需知识、事实/推断区分和写入回读原则。删除阶段状态机、固定代理链、自动日志提交和私人会话解析；实现独立的 Node 运行链。采用 AGPL-3.0-only，见 LICENSE 和 NOTICE。
-

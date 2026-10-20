@@ -8,6 +8,7 @@
 - migrate 默认预览，--yes 才应用；--dry-run 优先。
 - 备份保存所有被替换或删除的原件；普通应用错误恢复原件，断电不保证自动恢复。
 - writes 的值可以是字符串或 Buffer；预览与应用通过 contentMatches 按字节比较，防止 PRD 二进制附件损坏或重复写入。
+- npm 发布前 prepublishOnly 执行 npm run check；包内容由 package.json files 白名单限定。GitHub CI 覆盖 Windows/Ubuntu 与 Node 20/24 的测试和打包预览。
 
 易错点：迁移可能将只有旧管理块的 AGENTS.md 标记为移除。安装器必须把它视为空内容，不能重新读取原文件而复活旧工作流。
 
