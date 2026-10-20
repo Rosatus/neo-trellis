@@ -1,165 +1,190 @@
+<div align="center">
+
 # neo-trellis
 
-为 Codex、Claude Code 和 Pi 提供可移植的项目知识。AGENTS.md 是通用路由，项目地图在外部；模型按范围读取知识，在正常开发中维护事实、契约和有证据的纠正。
+**让 AI agent 快速找到项目知识，把确认过的需求带到交付。**
 
-不创建任务状态机，不强制规划文档，不读取私人对话，不自动提交，也不要求用户额外执行 remember / recall。
+面向 Codex、Claude Code 和 Pi 的轻量项目知识与 PRD 工作流。
 
-## 开始使用
+[![npm](https://img.shields.io/npm/v/neo-trellis)](https://www.npmjs.com/package/neo-trellis)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D20-339933)](https://nodejs.org/)
+[![License: AGPL v3](https://img.shields.io/badge/license-AGPL--3.0-blue)](https://github.com/Rosatus/neo-trellis/blob/main/LICENSE)
 
-需要 Node.js 20 或更高版本，无第三方运行依赖。当前版本 0.1.0 可通过 npm 从 GitHub 安装；npm registry 首次发布尚待完成。
+[快速开始](#快速开始) · [工作方式](#工作方式) · [PRD 工作流](#从想法到交付) · [从 Trellis 迁移](#从-trellis-迁移) · [详细参考](https://github.com/Rosatus/neo-trellis/blob/main/docs/reference.md)
 
-```powershell
-# 从 GitHub 的版本标签全局安装 CLI
-npm install -g git+https://github.com/Rosatus/neo-trellis.git#v0.1.0
+</div>
 
-# 在目标项目中执行，按实际使用的平台选择
-neo-trellis init --codex --claude --pi
+## 为什么需要 neo-trellis
 
-# 或不安装，直接运行本地入口
-node C:/code/neo-trellis/bin/neo-trellis.mjs init --codex --cwd C:/code/my-project
-```
+模型越来越擅长写代码，但项目里的约定、反直觉边界和用户已经确认的决定，仍需要一个可查证、可维护的存放位置。换一个会话，不应该意味着重新探索整个项目；改过一次的误解，也应该留下能帮助下次判断的依据。
 
-开发本项目时可用 `npm install -g .` 安装本地版本。首次发布到 npm registry 后，可改用 `npm install -g neo-trellis` 或 `npx neo-trellis init --codex`。
+neo-trellis 把这些信息放进项目里的 Markdown 和路径索引，让 agent 按当前工作范围读取、核对和维护。你继续用自然语言描述需求，知识和 PRD 与代码一起留在仓库中。
 
-维护者发布：在 npm 账户完成登录（`npm login`）后，运行 `npm publish --access public`。
-发布前自动运行检查和测试；`npm publish --dry-run` 可检查发布内容。
-包内只包含 bin、src、README、LICENSE、NOTICE 和 package.json，不包含项目会话配置或备份。
+- **按范围读知识。** 从项目地图找到模块入口，再加载相关约束，减少无目的的全库阅读。
+- **让知识跟上变化。** 代码事实变化时更新文档；契约与代码冲突时明确处理，而不是改写契约掩盖问题。
+- **记住有依据的纠正。** 把用户纠正、测试发现和非直觉边界写入所属模块，不堆积日记。
+- **把需求落实到验收。** 先澄清、确认 PRD，再开发；有验收证据后归档。
+- **支持已有项目。** 增量初始化，保留用户配置，也能从原版 Trellis 导入知识和 PRD。
 
-初始化只创建知识骨架，不凭空生成项目事实。重新开启宿主后，让 agent 正常工作，例如：“先基于实际入口和目录建立项目地图，再处理支付模块的问题。”内部 skill 要求逐步建图、按范围读取，而不是扫描整个仓库。
+核心由 **两个 skill、轻量宿主入口和一个 CLI** 组成。执行计划、工具调用和会话管理继续由你使用的 agent 宿主负责。
 
-```text
-AGENTS.md                         通用路由，不含项目专有地图
-CLAUDE.md                         Claude 的同源通用路由（选择 Claude 时）
-.neo-trellis/
-  map.md                          项目职责导航、少量全局约束
-  routes.json                     代码路径前缀到知识的机器可读映射
-  modules/                        模块职责、关键路径、局部规则与易错点
-  spec/                           跨模块契约
-  research/                       可选的证据、实验、决策理由
-  legacy.md                       迁移后指向保留的 Trellis 知识
-  runtime/session.mjs             自包含的短入口 hook
-  manifest.json                   安装平台与受管理文件指纹
-```
+## 快速开始
 
-`map.md` 用于解释结构，`routes.json` 是路径匹配的权威来源。路由更新时同步地图的职责导航，不在 AGENTS.md 复制它们。
+需要 **Node.js 20+**。无第三方运行依赖。
 
-```json
-{
-  "version": 1,
-  "routes": [
-    {
-      "paths": ["src/payments/", "test/payments/"],
-      "knowledge": [
-        ".neo-trellis/modules/payments.md",
-        ".neo-trellis/spec/monetary-values.md"
-      ]
-    }
-  ]
-}
-```
-
-路径相对项目根目录，使用文件路径或带 `/` 的目录前缀；不使用 glob。全部匹配规则取并集，子模块不会遮蔽父范围约束。知识正文按需读取，不通过 hook 批量注入。
-
-## 知识如何维护
-
-同一份内部 skill 安装到三个平台各自的 skill 目录。它在以下时机工作：进入新代码范围、用户给出明确纠正、验证暴露反直觉边界，以及一轮逻辑修改结束。
-
-- **事实跟随实现：** 路径、职责、依赖变化时更新相关文档。
-- **契约约束实现：** 代码与兼容承诺、外部约定冲突时，不能静默改规范迎合代码。
-- **教训需要证据：** 记录常见误判、正确行为、适用条件、用户纠正或验证依据。临时命令失败、拼写错误和未经确认的推断不升级成规则。
-- **修改后回读：** 核对真实文件与链接，不用“计划更新”或日志代替更新成功。
-- **历史不是当前事实：** 研究材料说明当时发生了什么；使用前核对当前适用性。替代旧规则时在旧记录注明已替代及新规则路径。
-
-CLI 不自动运行模型，也不监视每一次文件写入。语义维护由 agent 执行，以下命令提供可核对的辅助信息：
+在目标项目目录执行，选择你使用的平台：
 
 ```sh
-neo-trellis route src/payments/service.ts
-neo-trellis status
-neo-trellis doctor
+npx neo-trellis init --codex
 ```
 
-`status` 汇总 Git 暂存、未暂存与未跟踪路径并匹配知识。它不是知识新鲜度证明：已提交的变化不在当前 diff 中，路径匹配也不能判定语义是否失效。`doctor` 检查文档链接、路由、安装文件及配置，不能证明知识内容正确。
+也可以一次安装多个平台：
 
-`doctor`、`route`、`status` 会向上寻找最近的 neo-trellis 项目；`route` 的路径参数始终相对项目根目录。`init` 和 `migrate` 精确使用当前目录或 `--cwd`，不会擅自选择父项目。
+```sh
+npx neo-trellis init --codex --claude --pi
+```
 
-## 平台集成
+如果经常使用 CLI，可以全局安装：
 
-| 平台 | 安装内容 | 行为 |
+```sh
+npm install -g neo-trellis
+neo-trellis init --codex
+```
+
+初始化后重新开启 agent 会话，按宿主提示启用或批准集成，然后直接开始工作：
+
+> 先基于实际入口和目录建立项目地图，再帮我修改支付模块的退款逻辑。
+
+初始化创建知识骨架；项目事实由 agent 在实际工作中逐步确认。已有 Trellis 项目请使用下方的迁移命令。
+
+## 工作方式
+
+### 一张地图，按需展开
+
+`AGENTS.md` 保存通用路由，项目地图放在 `.neo-trellis/map.md`，范围映射放在 `routes.json`。进入一个模块时，agent 先读取其知识入口，再查看相关代码。
+
+```text
+.neo-trellis/
+├── map.md             项目地图：模块、职责与入口
+├── routes.json        代码路径 → 知识文件
+├── modules/           模块事实、局部约束和经验教训
+├── spec/              跨模块契约与稳定规则
+├── research/          调研、实验及决策依据
+└── prds/              需求与交付记录，按需创建
+    ├── drafts/        可选的澄清草稿
+    ├── active/        已确认、尚未完成的 PRD
+    └── archive/       已完成或明确终止的历史 PRD
+```
+
+地图是导航，代码是实现事实，spec 是应当遵守的契约。三者冲突时，agent 应核对并解决冲突；不能仅凭一份文档就认定实现正确。
+
+### 两个 skill，各司其职
+
+| Skill | 何时使用 | 负责什么 |
 |---|---|---|
-| Codex | `.agents/skills/neo-trellis/`、`.codex/hooks.json` | SessionStart 短导航；遵循宿主的 hook 信任和开关 |
-| Claude Code | `.claude/skills/neo-trellis/`、`.claude/settings.json`、CLAUDE.md | SessionStart 短导航 |
-| Pi | `.pi/skills/neo-trellis/`、`.pi/extensions/neo-trellis.ts` | `before_agent_start` 提供有界、不会累加的短导航 |
+| `neo-trellis` | 进入项目或新代码范围、修改相关实现时 | 按范围加载知识，维护事实与契约，记录有证据的纠正 |
+| `neo-trellis-prd` | 接收产品需求、继续或完成某个 PRD 时 | grill 澄清、用户确认、正式落盘、验收归档 |
 
-启动时只给出知识入口；compact/resume 提醒重新读取当前相关知识；clear 不恢复旧任务。Pi 通过其扩展事件提供入口，不假装拥有 Claude/Codex 的同名压缩事件。
+日常小修复不必创建 PRD，也不需要手动调用 remember 或 recall。
 
-Codex 可能需要在用户配置启用 hooks、信任项目并在 `/hooks` 批准 hook。CLI 不改用户级配置。`doctor` 仅检查静态配置，不能确认真实宿主已加载或批准。自动加载方式也受宿主版本影响。
+### 轻量入口，不批量注入文档
 
-任务执行状态、工具结果、会话恢复由 harness 负责；必要的工作交接可以使用宿主持久任务或单独短文档，不能塞进长期 spec。
+| 平台 | Skill 位置 | 会话入口 |
+|---|---|---|
+| Codex | `.agents/skills/` | SessionStart hook + AGENTS.md |
+| Claude Code | `.claude/skills/` | SessionStart hook + CLAUDE.md |
+| Pi | `.pi/skills/` | `before_agent_start` extension + AGENTS.md |
 
-## PRD skill
+入口只提示知识的位置。Codex/Claude 的 compact、resume 会提醒重新加载相关知识；clear 不自动恢复旧任务。Pi 使用自身扩展事件提供入口。
 
-三平台均安装 `neo-trellis-prd`，AGENTS.md 的通用路由也指向
-`.neo-trellis/skills/prd.md`。收到用户 PRD、产品功能需求，或继续对应 PRD 时使用；普通小修复不强制走此流程。
+宿主的信任设置、hook 开关和版本会影响实际加载。`doctor` 能检查静态安装状态，不能代替真实会话验证。
 
-1. **先 grill：** 自行查证项目事实，按决策依赖分轮询问关键问题，提供建议，等待用户回答。复用已确认的信息，不反复询问。
-2. **用户确认：** 展示完整 PRD，包含范围、非目标、行为、约束、可验证的验收标准和未决项。确认之前不把草稿当作开发依据。
-3. **正式落盘与开发：** 确认后保存 `.neo-trellis/prds/active/<id>/prd.md`；已有开发授权就继续，仅要求写 PRD 则交付文件后结束。实质需求变更再次澄清确认。
-4. **验收后归档：** 逐项记录验收证据，全部满足后将整个目录移动至 `.neo-trellis/prds/archive/<id>/`，保留附件并核对链接。待用户验收或尚未验证时保持 active；取消与替代不冒充完成。
+## 从想法到交付
 
-长讨论可选用 `prds/drafts/<id>/prd.md` 保存明确标记的草稿；目录按需创建。
-PRD 是需求约定及交付记录，长期规则仍进入 modules/spec。没有独立索引或任务状态机，也不使用 stop hook 猜测需求是否完成。
-自动触发依靠宿主 skill 选择及 AGENTS/CLAUDE 路由，实际提问、确认和归档由 agent 执行，不能视为程序强制的审批门禁。
+直接把产品需求交给 agent：
 
-访谈方法参考 [Matt Pocock 的 grill-me](https://github.com/mattpocock/skills/tree/main/skills/productivity/grill-me)
-及其目前调用的 [grilling](https://github.com/mattpocock/skills/tree/main/skills/productivity/grilling)：依赖有序的决策轮次、建议答案、自行查证事实、最终确认。
-本实现独立编写并保持自包含，不需要安装上游 skill；不采用其强制子代理或整轮列出所有可问问题的要求。
+> 我想给管理后台增加批量导入用户。请先 grill 澄清需求，确认 PRD 后再开发。
+
+```text
+需求 → grill 澄清 → 用户确认 → PRD 落盘 → 开发与验收 → 归档
+```
+
+1. **澄清关键决定。** agent 自行查证代码事实，按依赖关系分轮提问，给出建议，等待你的决定。
+2. **确认完整 PRD。** 明确目标、范围、非目标、行为、约束和可验证的验收标准。长讨论可以保存草稿，但草稿不是开发依据。
+3. **按约定开发。** 确认后写入 `prds/active/<id>/prd.md`。已授权开发就继续；只要求编写 PRD 则交付文件后结束。实质需求变更重新确认。
+4. **凭证据归档。** 逐项记录验收结果，全部满足后归档。待验证、待用户验收的需求保持 active；取消与替代明确标记。
+
+**PRD 记录需求和验收，task 记录执行步骤。** neo-trellis 维护前者，步骤和分工交给宿主计划；必要的跨会话进度简短写入 PRD，长期规则进入模块知识或 spec。
 
 ## 从 Trellis 迁移
 
-仅支持原版 Trellis，不支持 mini-trellis。先查看计划：
+支持**原版 Trellis**，暂不支持 mini-trellis。
+
+先预览，再应用：
 
 ```sh
-neo-trellis migrate --codex --claude --pi --dry-run
-neo-trellis migrate --codex --claude --pi --yes
-neo-trellis doctor
+npx neo-trellis migrate --codex --claude --pi --dry-run
+npx neo-trellis migrate --codex --claude --pi --yes
+npx neo-trellis doctor
 ```
 
-不传 `--yes` 时 `migrate` 也只预览。迁移会：
+迁移会保留原知识，备份并停用已识别的旧执行集成，安装 neo-trellis 的路由和 skills。
 
-1. 在 `.neo-trellis-backups/<唯一标识>/` 备份被替换或移除的文件及目录，保存备份清单；该目录自动加入 .gitignore。
-2. 原样保留 `.trellis/spec/`、`research/`、`workspace/`、`tasks/`，通过 `legacy.md` 引用；另外将可识别的 PRD 资料复制到新 PRD 目录，规则见下文。
-3. 停用支持平台上的明确 Trellis hooks、skills、agents、命令和 Pi extension，保留其他用户配置。
-4. 移除旧 `workflow.md`、`.version` 和 `scripts/` 执行层，安装 neo-trellis 的入口和集成。
+| 旧项目内容 | 迁移结果 |
+|---|---|
+| spec、research、workspace | 保留原位，通过 `legacy.md` 导航 |
+| 待实现、进行中或 review 的 PRD | 复制到 `prds/active/` |
+| 明确完成或无状态冲突的历史归档 PRD | 复制到 `prds/archive/` |
+| 缺少 PRD、元数据损坏或状态不明 | 保留原位，在预览中说明 |
+| 旧 task 执行配置 | 作为历史资料保留，不恢复任务引擎 |
 
-PRD 导入包含 `.trellis/tasks/<任务>/prd.md` 和 `tasks/archive/YYYY-MM/<任务>/prd.md`：
+原始任务和附件保留；重复迁移不会覆盖已导入后修改的 PRD。历史归档不代表重新通过验收，迁移也不会自动恢复旧工作。
 
-- `planning`、`in_progress`、`review` 导入 `prds/active/`；明确 `completed` 或无冲突的历史归档导入 `prds/archive/`。
-- 非归档任务缺少状态、状态与归档位置冲突、`task.json` 损坏、没有 PRD 或不支持的归档目录布局，会在预览中说明并保留原位。
-- 复制任务资料及二进制附件；常规 Markdown 外部相对链接调整为指向保留的原始资料。代码示例、复杂链接、HTML 和 JSON 中的路径不自动改写，预览提醒核对。
-- `prds/trellis-imports.json` 记录来源、初始目标、原状态和内容指纹。它是一次性导入账本，不是当前任务状态表；归档后初始目标可能不再是现址。重复迁移不覆盖已导入内容、不恢复已移动或删除的副本，旧源发生变化时提示手工核对。目标冲突时停止。
-- 历史确认和验收均标记为未经迁移验证。迁移不重新 grill、不补造验收、不自动继续旧工作；实际恢复开发时才澄清相关缺口。
+备份位于 `.neo-trellis-backups/`。自定义脚本引用、复杂跨目录链接和其他宿主的集成需要核对；详见[迁移与恢复参考](https://github.com/Rosatus/neo-trellis/blob/main/docs/reference.md#从-trellis-迁移)。
 
-**PRD 与 task 不等义。** neo-trellis 只维护 PRD 这一条持久需求与交付记录；执行步骤交给宿主计划/待办，必要的跨会话进度写在 PRD 中。旧 `task.json`、执行上下文作为历史材料保留，不恢复独立 task 系统；没有 PRD 的 task 不强制转成 PRD。长期契约仍放在 modules/spec。
+## CLI
 
-自定义旧脚本也会进入备份；如果其他工具引用这些脚本，应先检查预览并调整调用。仅承诺处理 Codex、Claude、Pi，其他宿主的旧集成需单独处理。清理前验证路径，不跟随符号链接。
+| 命令 | 用途 |
+|---|---|
+| `init --codex --claude --pi` | 初始化或更新所选平台，至少选择一个 |
+| `migrate --codex --dry-run` | 预览原版 Trellis 迁移 |
+| `migrate --codex --yes` | 应用迁移 |
+| `doctor` | 检查知识链接、路由和安装状态 |
+| `route src/payments/service.ts` | 查询代码路径对应的知识 |
+| `status` | 将 Git 工作区的变化匹配到知识范围 |
 
-应用中的普通文件错误会尝试回滚；断电或进程被强杀无法保证自动回滚，备份仍可用于恢复。恢复时依据备份 `manifest.json`：`existing` 是有原件备份的路径，`paths` 中其余路径是本次新增项。先停止宿主并核对这些路径，避免覆盖迁移后新工作。
+通用选项：`--cwd <目录>`、`--help`、`--version`。安装和迁移支持 `--dry-run`；迁移默认只预览，`--yes` 才应用。
 
-迁移保留旧知识原位是刻意选择：自动改写所有历史链接容易损坏依据。后续 agent 在实际接触模块时，将当前有用的契约整合到新模块入口，不需要一次性重写历史。
-
-## 更新与验证
-
-重复运行 `init` 可补装平台、刷新未被修改的受管理集成；已有地图和知识不覆盖。受管理文件被本地修改时停止并报告冲突，不提供静默强制覆盖。JSON 配置保留其他字段，AGENTS/CLAUDE 仅替换 neo-trellis 管理块。
+更新 CLI 后，在项目中刷新集成：
 
 ```sh
-neo-trellis init --codex --dry-run
-neo-trellis init --codex
-npm test
+npm install -g neo-trellis@latest
+neo-trellis init --codex --claude --pi --dry-run
+neo-trellis init --codex --claude --pi
+```
+
+已有项目知识会保留。若受管理的 skill 或 runtime 被手工修改，安装器会报告冲突，不静默覆盖。
+
+## 设计边界
+
+知识维护和 PRD 归档由 agent 执行，CLI 不监视每次文件写入，也不保证文档实时正确。技能的确认流程是行为约定，不是程序强制审批门禁。
+
+`status` 用于定位受影响的知识，`doctor` 用于静态检查；它们都不能证明知识内容或验收结论正确。neo-trellis 不读取私人对话、不自动 Git commit、不代替宿主恢复完整会话状态。
+
+## 开发与贡献
+
+```sh
+git clone https://github.com/Rosatus/neo-trellis.git
+cd neo-trellis
+npm ci
+npm run check
 npm pack --dry-run
 ```
 
-测试覆盖 CLI 初始化/迁移端到端、配置保留、备份、路由和路径边界，以及真实子进程中的 hook 协议。宿主应用内的交付仍需在实际 Codex、Claude Code、Pi 会话中验证。
+实现使用 Node.js ESM。测试覆盖初始化、迁移、文件保留、备份回滚、范围路由和宿主 hook 协议。欢迎通过 [Issues](https://github.com/Rosatus/neo-trellis/issues) 提交可复现的问题和使用反馈。
 
-## 设计来源与许可
+## 致谢与许可
 
-借鉴 Trellis 的持久规范、范围上下文和保留用户配置实践，以及 mini-trellis 的短入口、按需知识、事实/推断区分和写入回读原则。删除阶段状态机、固定代理链、自动日志提交和私人会话解析；实现独立的 Node 运行链。采用 AGPL-3.0-only，见 LICENSE 和 NOTICE。
+设计借鉴 Trellis 的持久规范与范围上下文、mini-trellis 的短入口与按需知识，以及 [Matt Pocock 的 grill-me / grilling](https://github.com/mattpocock/skills/tree/main/skills/productivity/grilling) 的需求澄清方法。
+
+采用 **AGPL-3.0-only**。详见 [LICENSE](https://github.com/Rosatus/neo-trellis/blob/main/LICENSE) 和 [NOTICE](https://github.com/Rosatus/neo-trellis/blob/main/NOTICE)。
