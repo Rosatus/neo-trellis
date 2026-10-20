@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "routes": [
+    { "paths": ["src/", "bin/", "test/"], "knowledge": [".neo-trellis/spec/safety.md"] },
+    { "paths": ["bin/", "src/cli.mjs", "src/install.mjs", "src/storage.mjs", "test/cli.test.mjs", "test/install.test.mjs"], "knowledge": [".neo-trellis/modules/install.md"] },
+    { "paths": ["src/knowledge.mjs", "test/knowledge.test.mjs"], "knowledge": [".neo-trellis/modules/knowledge.md"] },
+    { "paths": ["src/platforms.mjs", "src/prd.mjs", "test/platforms.test.mjs"], "knowledge": [".neo-trellis/modules/platforms.md"] },
+    { "paths": ["src/migrate.mjs", "src/migrate-prds.mjs", "test/migrate.test.mjs", "test/migrate-prds.test.mjs"], "knowledge": [".neo-trellis/modules/migration.md"] }
+  ]
+}

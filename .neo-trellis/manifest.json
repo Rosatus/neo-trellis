@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "platforms": [
+    "claude",
+    "codex",
+    "pi"
+  ],
+  "managed": {
+    ".claude/skills/neo-trellis/SKILL.md": "f7d56e5d36288fb215dc161263d9304975ce06e9c4f490e38a07d3f16929e6ee",
+    ".neo-trellis/skills/knowledge.md": "795d56ec0a25b5ed5ea70a083a9d6642afa8467a4bbcbf03cc3cc5f34311e5e0",
+    ".neo-trellis/runtime/session.mjs": "0bfde15bb75cc799645bb6e68f3a1b639dfd5b5e6ebe3c09a2aed1bebdd1df1d",
+    ".agents/skills/neo-trellis/SKILL.md": "f7d56e5d36288fb215dc161263d9304975ce06e9c4f490e38a07d3f16929e6ee",
+    ".pi/skills/neo-trellis/SKILL.md": "f7d56e5d36288fb215dc161263d9304975ce06e9c4f490e38a07d3f16929e6ee",
+    ".pi/extensions/neo-trellis.ts": "07d4ff0f4ee5af379993d3ee0ccecb6619062515a8e449c0b2f82a9fabdd94d6",
+    ".claude/skills/neo-trellis-prd/SKILL.md": "07685d969c20d6c230904d9487960a308ef8171344553a7299631494f18b4879",
+    ".neo-trellis/skills/prd.md": "66180e09e243a1cc0fa73ec9cb7d41e07a292add2c1a25eca23c52c9f1925f68",
+    ".agents/skills/neo-trellis-prd/SKILL.md": "07685d969c20d6c230904d9487960a308ef8171344553a7299631494f18b4879",
+    ".pi/skills/neo-trellis-prd/SKILL.md": "07685d969c20d6c230904d9487960a308ef8171344553a7299631494f18b4879"
+  }
+}

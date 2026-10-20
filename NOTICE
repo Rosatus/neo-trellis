@@ -1,0 +1,13 @@
+neo-trellis
+Copyright (C) 2026 neo-trellis contributors.
+
+This implementation was developed with reference to the architecture and
+integration conventions of Trellis (Copyright (C) 2026 Mindfold LLC) and
+mini-trellis (Copyright (C) 2026 mini-trellis contributors).
+Both reference projects are distributed under the GNU Affero General Public
+License. neo-trellis is distributed under AGPL-3.0-only; see LICENSE.
+
+Changes include a new dependency-free Node CLI, external project map and
+scope routes, knowledge maintenance instructions, transactional installation
+backups, and migration that preserves legacy knowledge in place. The original
+task workflow and transcript retrieval subsystems are not included.

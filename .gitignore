@@ -1,0 +1,9 @@
+node_modules/
+*.tgz
+.neo-trellis-backups/
+.neo-trellis/runtime-state/
+.env
+.env.*
+!.env.example
+.npmrc
+*.log
