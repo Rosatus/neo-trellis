@@ -56,13 +56,13 @@ function makeTrellis(root) {
   return root;
 }
 
-test("basic plan removes runtime, keeps knowledge, writes legacy index", () => {
+test("basic plan preserves complete source until archival and writes legacy index", () => {
   const root = makeTrellis(tmp());
   const { writes, removals, notes } = planMigration(root);
 
-  assert.ok(removals.includes(".trellis/workflow.md"));
-  assert.ok(removals.includes(".trellis/.version"));
-  assert.ok(removals.includes(".trellis/scripts"));
+  assert.ok(!removals.includes(".trellis/workflow.md"));
+  assert.ok(!removals.includes(".trellis/.version"));
+  assert.ok(!removals.includes(".trellis/scripts"));
 
   // knowledge preserved: no removals inside spec/research/workspace/tasks
   for (const r of removals) {
@@ -439,7 +439,7 @@ test("empty platform dirs and missing files are fine", () => {
   const root = tmp();
   put(root, ".trellis/workflow.md", "# w\n");
   const { writes, removals } = planMigration(root);
-  assert.ok(removals.includes(".trellis/workflow.md"));
+  assert.ok(!removals.includes(".trellis/workflow.md"));
   assert.ok(writes.has(".neo-trellis/legacy.md"));
 });
 

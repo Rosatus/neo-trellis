@@ -36,7 +36,7 @@ function setup(root) {
   put(root, '.trellis/tasks/loose/implement.md', 'Evidence only');
   put(root, '.trellis/tasks/done/big.log', Buffer.alloc(2 * 1024 * 1024, 255));
 }
-const importPlan = root => planInstall(root, ['codex'], planMigration(root));
+const importPlan = root => planInstall(root, ['codex'], planMigration(root, { keepTrellis: true }));
 
 test('knowledge, cross-bundle links, all evidence and routes survive removal of legacy directory', t => {
   const root = fixture(t); setup(root);

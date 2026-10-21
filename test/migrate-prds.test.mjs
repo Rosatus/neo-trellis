@@ -32,7 +32,7 @@ test('imports active and historical archives, preserves attachments and source, 
   task(root, 'complete', 'completed');
   task(root, 'archive/2026-10/old', 'completed');
   task(root, 'archive/2026-09/unknown', undefined);
-  const base = planMigration(root);
+  const base = planMigration(root, { keepTrellis: true });
   assert.equal(fs.existsSync(path.join(root, '.neo-trellis')), false);
   const imported = records(base);
   assert.equal(imported.length, 5);
@@ -53,7 +53,7 @@ test('imports active and historical archives, preserves attachments and source, 
 test('repeat migration preserves edited and moved destinations and reports changed sources', t => {
   const root = fixture(t);
   task(root, 'pending', 'in_progress');
-  const base = planMigration(root);
+  const base = planMigration(root, { keepTrellis: true });
   const entry = records(base)[0];
   applyPlan(root, planInstall(root, ['pi'], base));
   put(root, `${entry.destination}/prd.md`, 'User revision');
@@ -61,7 +61,7 @@ test('repeat migration preserves edited and moved destinations and reports chang
   fs.mkdirSync(path.dirname(path.join(root, moved)), { recursive: true });
   fs.renameSync(path.join(root, entry.destination), path.join(root, moved));
   put(root, '.trellis/tasks/pending/prd.md', 'Changed original');
-  const next = planMigration(root);
+  const next = planMigration(root, { keepTrellis: true });
   assert.ok(next.notes.some(n => n.includes('source changed')));
   applyPlan(root, planInstall(root, ['pi'], next));
   assert.equal(read(root, `${moved}/prd.md`), 'User revision');
@@ -75,7 +75,7 @@ test('ambiguous metadata and missing PRDs stay in legacy tree with explanations'
   put(root, '.trellis/tasks/bad/task.json', '{bad');
   task(root, 'archive/2026-10/conflict', 'in_progress');
   put(root, '.trellis/tasks/no-prd/task.json', '{}');
-  const plan = planMigration(root);
+  const plan = planMigration(root, { keepTrellis: true });
   assert.equal(plan.writes.has('.neo-trellis/prds/trellis-imports.json'), false);
   assert.ok(plan.notes.some(n => n.includes('ambiguous status')));
   assert.ok(plan.notes.some(n => n.includes('malformed task.json')));
@@ -86,16 +86,16 @@ test('same task names in different archive months have unique destinations', t =
   const root = fixture(t);
   task(root, 'archive/2026-09/same', 'completed');
   task(root, 'archive/2026-10/same', 'completed');
-  const imported = records(planMigration(root));
+  const imported = records(planMigration(root, { keepTrellis: true }));
   assert.equal(new Set(imported.map(r => r.destination)).size, 2);
   put(root, `${imported[0].destination}/prd.md`, 'Existing user data');
-  assert.throws(() => planMigration(root), /destination already exists/);
+  assert.throws(() => planMigration(root, { keepTrellis: true }), /destination already exists/);
 });
 
 test('legacy completion aliases normalize without fabricating acceptance', t => {
   const root = fixture(t);
   for (const status of ['done', 'complete', 'cancelled', 'canceled', 'superseded']) task(root, status, status);
-  const imported = records(planMigration(root));
+  const imported = records(planMigration(root, { keepTrellis: true }));
   assert.equal(imported.length, 5);
   for (const entry of imported) {
     assert.ok(entry.destination.includes('/archive/'));
@@ -110,7 +110,7 @@ test('link relocation preserves code examples and handles reference links', t =>
   const example = '[rule](../../spec/rule.md)';
   const code = '```md\n' + example + '\n```\n`' + example + '`\n';
   task(root, 'pending', 'planning', code + '[rule]: ../../spec/rule.md\n');
-  const plan = planMigration(root);
+  const plan = planMigration(root, { keepTrellis: true });
   const entry = records(plan)[0];
   const text = plan.writes.get(`${entry.destination}/prd.md`);
   assert.ok(text.startsWith(code));
@@ -125,6 +125,6 @@ test('symlink attachments are rejected before any mutation', t => {
   put(outside, 'secret', 'external');
   try { fs.symlinkSync(outside, path.join(root, '.trellis/tasks/pending/linked'), 'junction'); }
   catch (error) { if (error.code === 'EPERM') { t.skip('Symlink privilege unavailable'); return; } throw error; }
-  assert.throws(() => planMigration(root), /symlink/i);
+  assert.throws(() => planMigration(root, { keepTrellis: true }), /symlink/i);
   assert.equal(fs.existsSync(path.join(root, '.neo-trellis')), false);
 });

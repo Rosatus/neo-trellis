@@ -54,9 +54,5 @@ export function planInstall(root, selected, base = { writes: new Map(), removals
   const ignore = current('.gitignore') ?? '';
   const additions = ['.neo-trellis-backups/', '.neo-trellis/runtime-state/'].filter(line => !ignore.split(/\r?\n/).includes(line));
   if (additions.length) writes.set('.gitignore', ignore + (ignore && !ignore.endsWith('\n') ? '\n' : '') + additions.join('\n') + '\n');
-  if (writes.has('.neo-trellis/legacy.md')) {
-    const map = current('.neo-trellis/map.md');
-    if (map && !map.includes('(legacy.md)')) writes.set('.neo-trellis/map.md', map + '\n## Migrated knowledge\n\nRead [imported knowledge](legacy.md) and its scope map for migrated specs, evidence and PRDs. Copied specs remain contracts; historical task plans do not automatically become contracts.\n');
-  }
-  return { writes, removals: base.removals.filter(name => !writes.has(name)), notes: base.notes };
+  return { writes, removals: base.removals.filter(name => !writes.has(name)), notes: base.notes, retirement: base.retirement };
 }

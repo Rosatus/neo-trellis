@@ -21,6 +21,10 @@ reorganizing files, or writing review notes.
   Use the available neo-trellis CLI, or npx neo-trellis if not installed.
   Run neo-trellis migrate --cwd <project> with the selected --codex, --claude,
   and/or --pi flags to preview. Review its removals, backups and warnings.
+  Applying archives the entire original .trellis into a verified ZIP under
+  .neo-trellis-backups/ before changes, then removes the directory after import
+  and dependency checks pass. Explain this previewed behavior. Use
+  --keep-trellis when the user requests retaining the original directory.
   If applying migration is already authorized, rerun with --yes; otherwise
   deliver the preview. Do not use init as a substitute for migration.
 - After import: read .neo-trellis/migration/trellis-report.json, map.md and
@@ -75,6 +79,10 @@ Separate current dependencies from historical mentions and source provenance.
 Inspect references outside migrated files (project instructions, host configs,
 scripts and external tool entry points) before claiming .trellis is removable.
 Old unsupported integrations need retirement, not compatibility reimplementation.
-Only delete the original directory when that deletion is explicitly authorized,
-the dependency audit is resolved, and needed evidence is preserved. Otherwise
-report that it remains. No automatic commits, publishing or old-task execution.
+The CLI reports archive location, retirement blockers and whether the original
+directory was removed. Do not equate successful import with successful removal.
+If retirement was blocked, resolve relevant dependencies before rerunning the
+authorized migration; do not manually bypass archive or source-change checks.
+Keep earlier migration backups: projects migrated by older releases may already
+have parts of their original runtime preserved there. No automatic commits,
+publishing or old-task execution.

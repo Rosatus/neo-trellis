@@ -181,8 +181,8 @@ export function planKnowledgeImports(root, plan, prds) {
   plan.writes.set('.neo-trellis/legacy.md', [
     '# Migrated Trellis knowledge', '',
     'Copied specs are still authoritative until a current spec explicitly supersedes them.',
-    'Use the neo-trellis copies as the maintained source. Original files remain only for',
-    'comparison and recovery; they are not a second source to keep updating.', '',
+    'Use the neo-trellis copies as the maintained source. The migration report records',
+    'whether the original directory was retained or retired into a verified ZIP backup.', '',
     ...ROOTS.filter(([from]) => exists(root, from)).map(([, to]) => `- [${to.slice('.neo-trellis/'.length)}/](${to.slice('.neo-trellis/'.length)}/)`),
     '- [Project map](map.md)',
     '- [Migration report and source mappings](migration/trellis-report.json)',

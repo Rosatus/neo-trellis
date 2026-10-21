@@ -22,14 +22,14 @@ test('CLI fresh init, doctor and route work in a directory with spaces', t => {
   assert.equal(installed.status, 0, installed.stderr);
   assert.equal(run(root, 'doctor').status, 0);
   put(root, '.neo-trellis/routes.json', JSON.stringify({ version: 1, routes: [{ paths: ['src/'], knowledge: ['.neo-trellis/spec/index.md'] }] }));
-  const routed = run(root, 'route', 'src/foo.mjs');
+  const routed = run(root, 'route', 'src/foo.mjs', '--json');
   assert.deepEqual(JSON.parse(routed.stdout).knowledge, ['.neo-trellis/spec/index.md']);
   assert.equal(run(root, 'init', '--codex').status, 0);
   const nested = path.join(root, 'src'); fs.mkdirSync(nested);
   assert.equal(run(nested, 'doctor').status, 0);
-  assert.deepEqual(JSON.parse(run(nested, 'route', 'src/foo.mjs').stdout).knowledge, ['.neo-trellis/spec/index.md']);
+  assert.deepEqual(JSON.parse(run(nested, 'route', 'src/foo.mjs', '--json').stdout).knowledge, ['.neo-trellis/spec/index.md']);
 });
-test('migration preview does not mutate; apply preserves sources, backs up runtime and replaces router', t => {
+test('migration previews without mutation; apply archives complete source and retires it', t => {
   const root = fixture(t);
   put(root, 'AGENTS.md', '<!-- TRELLIS:START -->\n# Trellis Instructions\nManaged by Trellis.\n<!-- TRELLIS:END -->\n');
   put(root, '.trellis/workflow.md', 'Old phases');
@@ -42,7 +42,7 @@ test('migration preview does not mutate; apply preserves sources, backs up runti
   assert.equal(run(root, 'init', '--claude').status, 1);
   const preview = run(root, 'migrate', '--claude');
   assert.equal(preview.status, 0, preview.stderr);
-  assert.match(preview.stdout, /filesToWrite/);
+  assert.match(preview.stdout, /preview/);
   assert.doesNotMatch(preview.stdout, /attachment\.bin/);
   assert.match(run(root, 'migrate', '--claude', '--verbose').stdout, /attachment\.bin/);
   assert.equal(fs.existsSync(path.join(root, '.neo-trellis')), false);
@@ -50,9 +50,7 @@ test('migration preview does not mutate; apply preserves sources, backs up runti
   assert.equal(applied.status, 0, applied.stderr);
   const imported = JSON.parse(fs.readFileSync(path.join(root, '.neo-trellis/prds/trellis-imports.json'), 'utf8')).records[0];
   assert.deepEqual(fs.readFileSync(path.join(root, imported.destination, 'attachment.bin')), Buffer.from([255, 0, 128]));
-  assert.equal(fs.readFileSync(path.join(root, '.trellis/spec/backend/index.md'), 'utf8'), 'Contract');
-  assert.equal(fs.readFileSync(path.join(root, '.trellis/tasks/old/prd.md'), 'utf8'), 'Historical requirements');
-  assert.equal(fs.existsSync(path.join(root, '.trellis/scripts')), false);
+  assert.equal(fs.existsSync(path.join(root, '.trellis')), false);
   const agents = fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8');
   assert.equal(agents.includes('TRELLIS:START -->\n# Trellis Instructions'), false);
   assert.match(agents, /NEO-TRELLIS:START/);
@@ -60,8 +58,24 @@ test('migration preview does not mutate; apply preserves sources, backs up runti
   assert.match(settings, /echo user/);
   assert.doesNotMatch(settings, /session-start\.py/);
   const backup = fs.readdirSync(path.join(root, '.neo-trellis-backups'))[0];
-  assert.equal(fs.readFileSync(path.join(root, '.neo-trellis-backups', backup, 'files/.trellis/scripts/task.py'), 'utf8'), 'legacy runtime');
+  assert.ok(fs.existsSync(path.join(root, '.neo-trellis-backups', backup, 'trellis.zip')));
+  const manifest = JSON.parse(fs.readFileSync(path.join(root, '.neo-trellis-backups', backup, 'trellis-manifest.json')));
+  assert.ok(manifest.entries.some(e => e.name === '.trellis/scripts/task.py'));
   assert.equal(run(root, 'doctor').status, 0);
+});
+
+test('human output is readable without ANSI, JSON emits one object, errors are structured', t => {
+  const root = fixture(t);
+  const preview = run(root, 'init', '--codex', '--dry-run');
+  assert.match(preview.stdout, /NEO-TRELLIS/);
+  assert.doesNotMatch(preview.stdout, /\x1b|"write":/);
+  const result = JSON.parse(run(root, 'init', '--codex', '--json').stdout);
+  assert.ok(result.result.changed > 0);
+  assert.equal(JSON.parse(run(root, 'init', '--codex', '--json').stdout).result.changed, 0);
+  assert.deepEqual(JSON.parse(run(root, 'doctor', '--json').stdout).errors, []);
+  const error = run(root, 'unknown', '--json');
+  assert.equal(error.status, 1);
+  assert.match(JSON.parse(error.stdout).error, /Unknown command/);
 });
 test('init refuses hook-only Trellis residue in Claude local settings', t => {
   const root = fixture(t);

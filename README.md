@@ -129,11 +129,11 @@ npx neo-trellis migrate --codex --claude --pi --yes
 npx neo-trellis doctor
 ```
 
-迁移会保留原知识，备份并停用已识别的旧执行集成，安装 neo-trellis 的路由和 skills。
+迁移先将完整 `.trellis/` 压缩到 `.neo-trellis-backups/<本次备份>/trellis.zip`，校验文件清单及逐文件 SHA-256，再导入知识、停用旧集成。导入验证与依赖检查通过后，整体删除 `.trellis/`；不再提前逐项删除其中的旧脚本。
 
 | 旧项目内容 | 迁移结果 |
 |---|---|
-| spec、research、workspace | 复制到新知识与历史目录，原件保留供核对 |
+| spec、research、workspace | 复制到新知识与历史目录，原件存入完整 ZIP 备份 |
 | 待实现、进行中或 review 的 PRD | 复制到 `prds/active/` |
 | 明确完成或无状态冲突的历史归档 PRD | 复制到 `prds/archive/` |
 | 缺少 PRD、元数据损坏或状态不明 | 资料完整复制到 `history/tasks/`，不猜测任务状态 |
@@ -145,7 +145,9 @@ npx neo-trellis doctor
 
 可识别的文档链接和指向已复制资料的项目相对路径会改写到新位置。`.neo-trellis/migration/trellis-report.json` 记录来源映射、范围依据、仍引用旧文件的位置和未覆盖的来源变化。旧 workflow、委派与验证策略不迁移为现行规则。
 
-目标是让新目录成为唯一维护入口，逐步弃用 `.trellis/`。迁移不会直接删除整个旧目录；报告只审计迁移资料，不能代替对其他宿主集成、业务脚本和外部工具的引用核对。完成核对后可以单独移除旧目录。
+发现现行知识、项目代码或配置仍引用 `.trellis`，或发现无法检查的符号链接、未处理的平台集成时，完成导入但保留源目录并列出阻碍项。备份后源目录发生变化也会阻止删除。依赖检查是静态检查，无法识别动态拼接路径或项目外部工具；这类项目请使用 `--keep-trellis` 保留原目录。
+
+预览不创建备份或删除文件。ZIP 支持 UTF-8 文件名、隐藏文件及空目录，附带 `trellis-manifest.json`；目前使用标准 ZIP，超过 ZIP64 边界（单文件/归档约 4 GiB 或 65,535 项）会安全停止。较早版本迁移过的项目只能归档当前剩余内容，请同时保留此前的备份。
 
 备份位于 `.neo-trellis-backups/`。自定义脚本引用、复杂跨目录链接和其他宿主的集成需要核对；详见[迁移与恢复参考](https://github.com/Rosatus/neo-trellis/blob/main/docs/reference.md#从-trellis-迁移)。
 
@@ -162,7 +164,28 @@ npx neo-trellis doctor
 
 通用选项：`--cwd <目录>`、`--help`、`--version`。安装和迁移支持 `--dry-run`；迁移默认只预览，`--yes` 才应用。
 
-迁移默认展示文件数量、体积、PRD 分类、删除项和现行知识残余引用；加 `--verbose` 查看完整清单。报告将现行知识与历史记录分开，历史路径提及不等同于仍在执行的依赖。
+默认输出终端友好的计划、阶段进度和结果摘要，突出备份路径及需要处理的问题；加 `--verbose` 查看完整文件清单。交互终端支持颜色，`NO_COLOR` 或重定向输出时使用纯文本。脚本应使用 `--json`，成功输出单个 JSON 对象，失败输出含 `error` 的对象并返回非零退出码。
+
+```text
+  NEO-TRELLIS  migrate / apply
+  C:\\projects\\my-app
+
+  Platforms     codex
+  Write         42 files
+  PRDs          3 active / 12 archived
+  Source        Archive full .trellis -> verify -> remove if checks pass
+
+  > Archive  Compressing and verifying the complete .trellis source
+  > Backup   Saving replaced integrations and configuration
+  > Apply    Writing 42 files and retiring 3 old integrations
+  > Verify   Checking imported files, archive integrity and unchanged source
+  > Retire   Removing the verified .trellis directory
+
+  + Completed 46 changes.
+
+  Archive       .neo-trellis-backups/<run>/trellis.zip
+  Old source    .trellis removed; verified ZIP retained
+```
 
 更新 CLI 后，在项目中刷新集成：
 

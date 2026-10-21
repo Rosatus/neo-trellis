@@ -14,3 +14,5 @@
 
 验证：test/install.test.mjs 覆盖幂等、配置保留、备份及失败回滚；test/cli.test.mjs 覆盖真实 CLI 初始化与迁移。
 - 0.2.0: CLI 版本读取 package.json；迁移摘要默认隐藏完整文件清单，--verbose 展开。doctor 忽略 Markdown 代码示例并解析链接编码/锚点。
+
+2026-10-21 更新：src/terminal.mjs 提供人类可读摘要和阶段进度，--json 输出单个机器对象（脚本需显式选择）；重定向和 NO_COLOR 禁用颜色。src/storage.mjs 在迁移应用前调用 archive.mjs 完整备份原始 .trellis，验证写入后才检查依赖并整体删除。--keep-trellis 保留完整源目录，不再提前删除其中的旧执行文件。

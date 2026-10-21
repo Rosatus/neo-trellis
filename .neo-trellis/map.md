@@ -13,9 +13,9 @@
 
 | 模块 | 职责 | 代码范围 | 知识入口 |
 |---|---|---|---|
-| CLI 与安装 | 参数、配置合并、指纹保护、备份回滚 | bin/、src/cli.mjs、src/install.mjs、src/storage.mjs | [安装](modules/install.md) |
+| CLI 与安装 | 参数、终端展示、配置合并、指纹保护、备份回滚 | bin/、src/cli.mjs、src/terminal.mjs、src/install.mjs、src/storage.mjs | [安装](modules/install.md) |
 | 项目知识 | 通用路由、维护规则、地图骨架、路径匹配与校验 | src/knowledge.mjs | [知识](modules/knowledge.md) |
 | 宿主集成 | Codex/Claude hook、三平台知识与 PRD skill、Pi extension | src/platforms.mjs、src/prd.mjs | [平台](modules/platforms.md) |
-| 迁移 | Trellis 识别、旧配置停用、知识与 PRD 导入、范围映射、语义整理 skill | src/migrate.mjs、src/migrate-prds.mjs、src/migrate-knowledge.mjs、src/migration-skill.mjs | [迁移](modules/migration.md) |
+| 迁移 | Trellis 识别、旧配置停用、完整归档与依赖检查、知识与 PRD 导入、范围映射、语义整理 skill | src/migrate.mjs、src/migrate-prds.mjs、src/migrate-knowledge.mjs、src/migration-skill.mjs、src/archive.mjs、src/retirement.mjs | [迁移](modules/migration.md) |
 
 路径匹配以 [routes.json](routes.json) 为准；共享约束见 [安全契约](spec/safety.md)。测试在 test/，按模块命名。

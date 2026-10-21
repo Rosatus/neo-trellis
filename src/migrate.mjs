@@ -4,17 +4,15 @@
  * `planMigration(root)` inspects `root` and returns a pure plan:
  *   { writes: Map<string, string | Buffer>, removals: string[], notes: string[] }
  *
- * Nothing is written or deleted here — callers apply the plan (after their
- * own backup step if they want one).
+ * Nothing is written or deleted here. applyPlan archives and verifies the
+ * complete source before changes, then retires it when dependency checks pass.
  *
  * Policy:
  * - `.trellis/` knowledge (spec, research, workspace, tasks) is copied into
  *   `.neo-trellis/` with provenance, navigation and a reference audit.
- *   Original sources stay in place for comparison/recovery; old workflow
+ *   Original sources stay intact until final archival/retirement; old workflow
  *   policies are not promoted into the new knowledge layer.
- * - Old execution wiring is disabled: `.trellis/workflow.md`,
- *   `.trellis/.version`, `.trellis/scripts/` (backed up and removed by
- *   the installer), managed `<!-- TRELLIS:* -->` blocks in
+ * - Old execution wiring is disabled: managed `<!-- TRELLIS:* -->` blocks in
  *   AGENTS.md / CLAUDE.md, Trellis hook entries inside
  *   `.claude/settings.json` / `.claude/settings.local.json` /
  *   `.codex/hooks.json`, `.pi` Trellis extension/agent wiring,
@@ -38,6 +36,7 @@ import {
 import path from "node:path";
 import { planPrdImports } from './migrate-prds.mjs';
 import { planKnowledgeImports } from './migrate-knowledge.mjs';
+import { snapshotTree } from './archive.mjs';
 
 /** Hook script basenames emitted by classic Trellis per platform. */
 const TRELLIS_HOOK_SCRIPTS = [
@@ -641,7 +640,7 @@ function stripTrellisBlock(content) {
 
 // ---------- plan ----------
 
-export function planMigration(root) {
+export function planMigration(root, { keepTrellis = false } = {}) {
   const writes = new Map();
   const removals = [];
   const notes = [];
@@ -660,7 +659,9 @@ export function planMigration(root) {
     throw new Error("no Trellis installation evidence found");
   }
 
-  const plan = { writes, removals, notes };
+  const retirement = !keepTrellis && hasDir(root, '.trellis')
+    ? { snapshot: snapshotTree(path.join(root, '.trellis')) } : null;
+  const plan = { writes, removals, notes, retirement };
   const write = (rel, content) => writes.set(rel, content);
   const writeOrRemove = (rel, res) => {
     if (!res) return;
@@ -668,11 +669,10 @@ export function planMigration(root) {
     else write(rel, res.content);
   };
 
-  // 1. Disable the old runtime, keep the knowledge tree.
-  for (const rel of [".trellis/workflow.md", ".trellis/.version"]) {
-    if (hasFile(root, rel)) removals.push(rel);
+  // Keep the entire source intact until verified archival and final retirement.
+  for (const dir of ['.claude/hooks', '.codex/hooks']) {
+    for (const script of TRELLIS_HOOK_SCRIPTS) if (hasFile(root, `${dir}/${script}`)) removals.push(`${dir}/${script}`);
   }
-  if (hasDir(root, ".trellis/scripts")) removals.push(".trellis/scripts");
 
   // 2. Managed markdown blocks.
   for (const md of ["AGENTS.md", "CLAUDE.md"]) {
@@ -798,7 +798,7 @@ export function planMigration(root) {
 
   notes.push(
     `Trellis evidence: ${trellisEvidence.join(", ")}`,
-    "knowledge copied into .neo-trellis/; original .trellis/ sources retained for comparison and recovery",
+    keepTrellis ? 'Original .trellis retained by --keep-trellis.' : 'Archive the full .trellis source before writes; retire only after verification and dependency checks.',
   );
 
   return plan;

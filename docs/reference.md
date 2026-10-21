@@ -103,10 +103,10 @@ neo-trellis doctor
 
 不传 `--yes` 时 `migrate` 也只预览。迁移会：
 
-1. 在 `.neo-trellis-backups/<唯一标识>/` 备份被替换或移除的文件及目录，保存备份清单；该目录自动加入 .gitignore。
-2. 将 backend/frontend 及已声明 package 的范围规范复制到 `modules/<范围>/`，其余 spec 复制到 `spec/`，research 复制到 `research/`，workspace 复制到 `history/workspace/`（均在 `.neo-trellis/` 下）。原件保留作核对和恢复，新副本是后续维护入口。
+1. 在 `.neo-trellis-backups/<唯一标识>/trellis.zip` 完整归档原始 `.trellis/`，验证 ZIP 内容与逐文件 SHA-256，保存 `trellis-manifest.json`。另外备份被替换或移除的宿主配置，保存 `manifest.json`；备份目录自动加入 .gitignore。
+2. 将 backend/frontend 及已声明 package 的范围规范复制到 `modules/<范围>/`，其余 spec 复制到 `spec/`，research 复制到 `research/`，workspace 复制到 `history/workspace/`（均在 `.neo-trellis/` 下）。原件进入 ZIP 备份，新副本是后续维护入口。
 3. 停用支持平台上的明确 Trellis hooks、skills、agents、命令和 Pi extension，保留其他用户配置。
-4. 移除旧 `workflow.md`、`.version` 和 `scripts/` 执行层，安装 neo-trellis 的入口和集成。
+4. 安装 neo-trellis 的入口和集成，验证写入、归档与源目录未变。静态依赖检查通过后整体删除 `.trellis/`；有阻碍则保留完整原目录并报告原因。`--keep-trellis` 可跳过归档和删除。不会提前逐项删除源目录中的旧执行文件。
 
 PRD 导入包含 `.trellis/tasks/<任务>/prd.md` 和 `tasks/archive/YYYY-MM/<任务>/prd.md`：
 
@@ -122,11 +122,15 @@ PRD 导入包含 `.trellis/tasks/<任务>/prd.md` 和 `tasks/archive/YYYY-MM/<�
 
 应用中的普通文件错误会尝试回滚；断电或进程被强杀无法保证自动回滚，备份仍可用于恢复。恢复时依据备份 `manifest.json`：`existing` 是有原件备份的路径，`paths` 中其余路径是本次新增项。先停止宿主并核对这些路径，避免覆盖迁移后新工作。
 
+恢复源目录时将 `trellis.zip` 解压到一个独立目录，按 `trellis-manifest.json` 核对文件和哈希，再将其中 `.trellis/` 放回项目；恢复旧工作流还需核对独立备份的宿主配置。部分删除失败时程序尝试补回缺失文件，保留已存在内容。旧版迁移曾提前移除部分脚本，因此已有旧备份也必须保留。标准 ZIP 当前不支持 ZIP64，超限会停止而不删除源目录。
+
 `migration/trellis-knowledge.json` 是知识副本的逐文件来源账本；原件变化不覆盖新副本。0.1.0 导入的 PRD 若仍与当时输出完全一致，可自动升级旧链接；已修改、移动或删除的副本保留现状。
 
 `map.md` 列出规范入口，routes.json 增量合并路径映射。优先识别 config.yaml 的普通 block-style `packages/<name>/path` 声明；否则从 index.md 和 directory-structure.md 提取实际存在的路径，明确标记为文档引用、范围待核对。不会仅根据 backend/frontend 名字推断目录。没有证据的规范只列入导航，不伪造路由。已有用户地图、路由及导入地图不会整体重建覆盖。
 
-旧 workflow、delegation、validation 等执行方法不迁移为现行规则。`migration/trellis-report.json` 记录复制映射、范围依据、缺失副本及迁移文档内残余旧路径。这不是全仓库引用检查：删除 `.trellis/` 前还需确认其他宿主集成、外部脚本和未迁移文档不再依赖它。迁移器不会整体删除旧目录。
+旧 workflow、delegation、validation 等执行方法不迁移为现行规则。`migration/trellis-report.json` 记录复制映射、范围依据、缺失副本、残余旧路径、归档位置和实际删除结果。退役检查另外扫描项目代码及配置的字面引用，但不能证明动态路径或项目外部工具没有依赖；存在这类依赖时使用 `--keep-trellis`。历史记录中的旧路径不是执行依赖。
+
+默认 CLI 输出面向人阅读；自动化脚本应增加 `--json`，读取单个结果对象。`--verbose` 展开文件及提示清单。重定向、`NO_COLOR` 和 `TERM=dumb` 不输出颜色。
 
 ## 更新与验证
 
