@@ -42,7 +42,7 @@ test('migration previews without mutation; apply archives complete source and re
   assert.equal(run(root, 'init', '--claude').status, 1);
   const preview = run(root, 'migrate', '--claude');
   assert.equal(preview.status, 0, preview.stderr);
-  assert.match(preview.stdout, /preview/);
+  assert.match(preview.stdout, /PREVIEW/);
   assert.doesNotMatch(preview.stdout, /attachment\.bin/);
   assert.match(run(root, 'migrate', '--claude', '--verbose').stdout, /attachment\.bin/);
   assert.equal(fs.existsSync(path.join(root, '.neo-trellis')), false);
@@ -67,8 +67,13 @@ test('migration previews without mutation; apply archives complete source and re
 test('human output is readable without ANSI, JSON emits one object, errors are structured', t => {
   const root = fixture(t);
   const preview = run(root, 'init', '--codex', '--dry-run');
-  assert.match(preview.stdout, /NEO-TRELLIS/);
-  assert.doesNotMatch(preview.stdout, /\x1b|"write":/);
+  assert.match(preview.stdout, /neo-trellis/);
+  assert.match(preview.stdout, /PLAN/);
+  assert.doesNotMatch(preview.stdout, /\x1b|"write":|\[object Object\]/);
+  const ascii = spawnSync(process.execPath, [cli, 'init', '--codex', '--dry-run', '--cwd', root], { encoding: 'utf8', env: { ...process.env, NEO_TRELLIS_ASCII: '1' } });
+  assert.match(ascii.stdout, /^[\x00-\x7f]*$/);
+  const help = spawnSync(process.execPath, [cli, '--help'], { encoding: 'utf8' }).stdout;
+  assert.match(help, /Commands[\s\S]*Options/);
   const result = JSON.parse(run(root, 'init', '--codex', '--json').stdout);
   assert.ok(result.result.changed > 0);
   assert.equal(JSON.parse(run(root, 'init', '--codex', '--json').stdout).result.changed, 0);

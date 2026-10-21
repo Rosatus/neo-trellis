@@ -7,22 +7,34 @@ import { planMigration, hasLegacyIntegration } from './migrate.mjs';
 import { inspectKnowledge, routeKnowledge } from './knowledge.mjs';
 import { applyPlan, read, digest, contentMatches } from './storage.mjs';
 import { retirementBlockers } from './retirement.mjs';
-import { heading, row, list, step, finish, showPlan } from './terminal.mjs';
+import { heading, section, row, list, step, finish, note, showPlan } from './terminal.mjs';
 
-const HELP = `neo-trellis — scoped project knowledge
+const HELP = `
+  neo-trellis - scoped project knowledge for Codex, Claude Code and Pi
 
-  init     --codex --claude --pi    Install selected integrations (choose one or more)
-  migrate  --codex --claude --pi    Preserve Trellis knowledge and replace its workflow
-  doctor                          Check installation, knowledge links and integration drift
-  route [paths...]                 Find knowledge for project-relative source paths
-  status                          Show changed Git paths and their knowledge routes
+  Usage
+    neo-trellis <command> [options]
 
-Options: --cwd <directory>  --dry-run  --yes  --verbose  --json  --keep-trellis  --help  --version
-Migration previews by default. Use --yes to apply after reviewing the plan.
-Migration archives the complete .trellis before changes, then removes it after verification.
-Use --keep-trellis to retain the source. --json emits one machine-readable result.
-Init never overwrites knowledge or locally modified managed integration files.
-No automatic commits, task creation or transcript collection.
+  Commands
+    init      --codex --claude --pi   Install selected integrations
+    migrate   --codex --claude --pi   Import Trellis knowledge, retire its workflow
+    doctor                            Check installation, links and drift
+    route     [paths...]              Find knowledge for project-relative paths
+    status                            Route changed Git paths to knowledge
+
+  Options
+    --cwd <dir>      Project directory (default: current)
+    --dry-run        Preview without writing (migrate previews by default)
+    --yes            Apply a migration after reviewing its preview
+    --keep-trellis   Keep the original .trellis after migration
+    --verbose        Show full file and note lists
+    --json           Emit one machine-readable result object
+    --help, --version
+
+  Migration archives the complete .trellis into a verified ZIP before changes
+  and removes it only after dependency checks pass. Init never overwrites
+  knowledge or locally modified managed files. No automatic commits, task
+  creation or transcript collection.
 `;
 export async function main(argv) {
   const { values, positionals } = parseArgs({ args: argv, allowPositionals: true, strict: true,
@@ -42,7 +54,6 @@ export async function main(argv) {
   const selected = PLATFORMS.filter(p => values[p]);
   if (['init', 'migrate'].includes(command)) {
     if (args.length) throw new Error('Unexpected positional arguments');
-    if (!values.json) step('Inspect', 'Checking project, integrations and migration inputs');
     if (command === 'init' && !read(root, '.neo-trellis/manifest.json') && hasLegacyIntegration(root)) throw new Error('Existing Trellis or mini-trellis detected; use migrate --dry-run for Trellis (mini-trellis migration is not supported)');
     const base = command === 'migrate' ? planMigration(root, { keepTrellis: values['keep-trellis'] }) : undefined;
     const plan = planInstall(root, selected, base);
@@ -69,21 +80,25 @@ export async function main(argv) {
     if (!values.json) showPlan(output, values.verbose);
     if (preview) {
       if (values.json) console.log(JSON.stringify(output, null, 2));
-      else finish(command === 'migrate' ? 'Preview only. Re-run with --yes to apply. No files changed.' : 'Preview only. No files changed.');
+      else finish(command === 'migrate' ? 'Preview only - nothing changed. Re-run with --yes to apply.' : 'Preview only - nothing changed.', 'warn');
       return;
     }
+    if (!values.json) section('Progress');
     const result = applyPlan(root, plan, { onProgress: values.json ? undefined : step });
+    const finalReport = command === 'migrate' ? JSON.parse(read(root, '.neo-trellis/migration/trellis-report.json') ?? '{}') : {};
     const next = command === 'migrate'
-      ? 'Review imported scopes with neo-trellis-migrate, then run neo-trellis doctor.'
+      ? finalReport.next ?? 'Review imported scopes with neo-trellis-migrate, then run neo-trellis doctor.'
       : 'Map relevant modules; restart your host and run neo-trellis doctor.';
     if (values.json) console.log(JSON.stringify({ ...output, result, next }, null, 2));
     else {
-      finish(result.blockers?.length ? 'Files migrated; source retirement needs attention.' : result.changed ? `Completed ${result.changed} changes.` : 'Already up to date.', Boolean(result.blockers?.length));
+      section('Result');
+      row('Changed', result.changed ? `${result.changed} paths` : 'nothing; already up to date');
       if (result.backup) row('Backup', result.backup);
       if (result.archive) row('Archive', result.archive);
-      if (command === 'migrate') row('Old source', result.retired ? '.trellis removed; verified ZIP retained' : output.sourceExists ? '.trellis retained; see blockers if any' : 'No .trellis directory was present');
-      list('Retirement blocked', result.blockers, values.verbose);
-      row('Next', next); console.log('');
+      if (command === 'migrate') row('Old source', result.retired ? '.trellis removed; verified ZIP retained' : output.sourceExists ? '.trellis retained' : 'no .trellis directory was present', result.retired || !output.sourceExists ? 'ok' : 'warn');
+      list('Retirement blocked', result.blockers, values.verbose, 'warn');
+      row('Next', next);
+      finish(result.blockers?.length ? 'Files migrated; source retirement needs attention.' : result.changed ? 'Done.' : 'Already up to date.', Boolean(result.blockers?.length));
     }
     return;
   }
@@ -110,9 +125,11 @@ export async function main(argv) {
     }
     result.warnings.push('Static checks cannot confirm host trust, enabled hook features, or actual hook delivery.');
     if (values.json) console.log(JSON.stringify(result, null, 2));
-    else { heading('doctor', root); row('Errors', result.errors.length); row('Warnings', result.warnings.length);
-      list('Needs attention', result.errors, true); list('Warnings', result.warnings, true);
-      finish(result.errors.length ? 'Checks failed.' : 'Static checks passed.', Boolean(result.errors.length)); }
+    else { heading('doctor', root); section('Checks');
+      row('Errors', result.errors.length, result.errors.length ? 'fail' : 'ok');
+      row('Warnings', result.warnings.length, result.warnings.length ? 'warn' : 'ok');
+      list('Needs attention', result.errors, true, 'fail'); list('Warnings', result.warnings, true, 'warn');
+      finish(result.errors.length ? 'Checks failed.' : 'Static checks passed.', result.errors.length ? 'fail' : 'ok'); }
     if (result.errors.length) process.exitCode = 1;
     return;
   }
@@ -125,9 +142,12 @@ export async function main(argv) {
     }
     const result = { paths, ...routeKnowledge(root, paths), note: 'Routes identify potentially relevant knowledge; changed code does not prove a contract is obsolete.' };
     if (values.json) console.log(JSON.stringify(result, null, 2));
-    else { heading(command, root); row('Paths', paths.length); list('Relevant knowledge', result.knowledge, values.verbose);
-      list('Unmapped paths', result.unmatched, values.verbose); if (!paths.length) finish('No paths to inspect.');
-      else { console.log(''); row('Note', result.note); console.log(''); } }
+    else { heading(command, root); section('Scope');
+      row('Paths', paths.length); row('Knowledge', result.knowledge.length); row('Unmapped', result.unmatched.length, result.unmatched.length ? 'warn' : undefined);
+      list('Relevant knowledge', result.knowledge, values.verbose);
+      list('Unmapped paths', result.unmatched, values.verbose, 'warn');
+      if (!paths.length) finish('No paths to inspect.');
+      else note(result.note); }
     return;
   }
   throw new Error(`Unknown command: ${command}. Use --help.`);

@@ -164,27 +164,36 @@ npx neo-trellis doctor
 
 通用选项：`--cwd <目录>`、`--help`、`--version`。安装和迁移支持 `--dry-run`；迁移默认只预览，`--yes` 才应用。
 
-默认输出终端友好的计划、阶段进度和结果摘要，突出备份路径及需要处理的问题；加 `--verbose` 查看完整文件清单。交互终端支持颜色，`NO_COLOR` 或重定向输出时使用纯文本。脚本应使用 `--json`，成功输出单个 JSON 对象，失败输出含 `error` 的对象并返回非零退出码。
+默认输出终端友好的计划、阶段进度和结果摘要，突出备份路径及需要处理的问题；加 `--verbose` 查看完整文件清单。交互终端支持颜色，`NO_COLOR` 或重定向输出时不着色；`TERM=dumb` 或 `NEO_TRELLIS_ASCII=1` 时改用纯 ASCII 符号。脚本应使用 `--json`，成功输出单个 JSON 对象，失败输出含 `error` 的对象并返回非零退出码。
 
 ```text
-  NEO-TRELLIS  migrate / apply
+  ◆ neo-trellis · migrate  [APPLY]
   C:\\projects\\my-app
+  ────────────────────────────────────────────────────────
 
-  Platforms     codex
-  Write         42 files
-  PRDs          3 active / 12 archived
-  Source        Archive full .trellis -> verify -> remove if checks pass
+  PLAN
+    Platforms     codex
+    Write         42 files · 96.3 KiB
+    Remove        3 old integration paths
 
-  > Archive  Compressing and verifying the complete .trellis source
-  > Backup   Saving replaced integrations and configuration
-  > Apply    Writing 42 files and retiring 3 old integrations
-  > Verify   Checking imported files, archive integrity and unchanged source
-  > Retire   Removing the verified .trellis directory
+  MIGRATION
+    PRDs          3 active · 12 archived
+    Old refs      0 current · 4 historical
+    Source        archive, verify, then remove .trellis
 
-  + Completed 46 changes.
+  PROGRESS
+  › 1  Archive   Compressing and verifying the complete .trellis source
+  › 2  Backup    Saving replaced integrations and configuration
+  › 3  Apply     Writing 42 files and retiring 3 old integrations
+  › 4  Verify    Checking imported files, archive integrity and unchanged source
+  › 5  Retire    Removing the verified .trellis directory
 
-  Archive       .neo-trellis-backups/<run>/trellis.zip
-  Old source    .trellis removed; verified ZIP retained
+  RESULT
+    Changed       46 paths
+    Archive       .neo-trellis-backups/<run>/trellis.zip
+    Old source    .trellis removed; verified ZIP retained
+
+  ✓ Done.
 ```
 
 更新 CLI 后，在项目中刷新集成：
