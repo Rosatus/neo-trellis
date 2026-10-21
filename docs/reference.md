@@ -104,7 +104,7 @@ neo-trellis doctor
 不传 `--yes` 时 `migrate` 也只预览。迁移会：
 
 1. 在 `.neo-trellis-backups/<唯一标识>/trellis.zip` 完整归档原始 `.trellis/`，验证 ZIP 内容与逐文件 SHA-256，保存 `trellis-manifest.json`。另外备份被替换或移除的宿主配置，保存 `manifest.json`；备份目录自动加入 .gitignore。
-2. 将 backend/frontend 及已声明 package 的范围规范复制到 `modules/<范围>/`，其余 spec 复制到 `spec/`，research 复制到 `research/`，workspace 复制到 `history/workspace/`（均在 `.neo-trellis/` 下）。原件进入 ZIP 备份，新副本是后续维护入口。
+2. 将 backend/frontend 及已声明 package 的范围规范复制到 `modules/<范围>/`，其余 spec 复制到 `spec/`，research 复制到 `research/`，workspace 复制到 `history/workspace/`（均在 `.neo-trellis/` 下）。原件进入 ZIP 备份，新副本是后续维护入口。上游 Trellis 通用 thinking guides 与未填写的 spec 模板按内容标记识别，进入 `history/trellis-guides/` 和 `history/trellis-spec-templates/`，不成为现行契约或路由。
 3. 停用支持平台上的明确 Trellis hooks、skills、agents、命令和 Pi extension，保留其他用户配置。
 4. 安装 neo-trellis 的入口和集成，验证写入、归档与源目录未变。静态依赖检查通过后整体删除 `.trellis/`；有阻碍则保留完整原目录并报告原因。`--keep-trellis` 可跳过归档和删除。不会提前逐项删除源目录中的旧执行文件。
 
@@ -112,7 +112,7 @@ PRD 导入包含 `.trellis/tasks/<任务>/prd.md` 和 `tasks/archive/YYYY-MM/<�
 
 - `planning`、`in_progress`、`review` 导入 `prds/active/`；`completed`、`done`、`complete` 或无冲突的历史归档导入 `prds/archive/`。`cancelled`、`canceled`、`superseded` 也归档，但不视为完成。导入账本记录原状态及规范化状态，原 task.json 不伪造验收结论。
 - 非归档任务缺少状态、状态与归档位置冲突、`task.json` 损坏、没有 PRD 或不支持的归档目录布局，会在预览中说明；资料完整复制到 `history/tasks/`，不丢弃、不强行分类成 PRD。
-- 不按大小过滤日志和二进制附件。常规 Markdown 相对链接指向对应新副本；Markdown/JSON/JSONL/TXT 中指向已复制资料的字面 `.trellis/…` 路径同步改写。代码示例中的相对链接、复杂链接、绝对路径和非文档文件内容不保证自动改写，需要核对报告及外部引用。
+- 不按大小过滤日志和二进制附件。常规 Markdown 相对链接指向对应新副本；现行知识（modules/spec/research）中指向已复制资料的字面 `.trellis/…` 路径同步改写；PRD 和 history 中的历史正文保持原样，只修正 Markdown 链接。Trellis 归档前常用的 `.trellis/tasks/<任务>/…` 会解析到对应 PRD 副本；无法确认的任务路径保持原样报告，不猜测目标。代码示例中的相对链接、复杂链接、绝对路径和非文档文件内容不保证自动改写，需要核对报告及外部引用。
 - `prds/trellis-imports.json` 记录来源、初始目标、原状态和内容指纹。它是一次性导入账本，不是当前任务状态表；归档后初始目标可能不再是现址。重复迁移不覆盖已导入内容、不恢复已移动或删除的副本，旧源发生变化时提示手工核对。目标冲突时停止。
 - 历史确认和验收均标记为未经迁移验证。迁移不重新 grill、不补造验收、不自动继续旧工作；实际恢复开发时才澄清相关缺口。
 
@@ -126,11 +126,11 @@ PRD 导入包含 `.trellis/tasks/<任务>/prd.md` 和 `tasks/archive/YYYY-MM/<�
 
 `migration/trellis-knowledge.json` 是知识副本的逐文件来源账本；原件变化不覆盖新副本。0.1.0 导入的 PRD 若仍与当时输出完全一致，可自动升级旧链接；已修改、移动或删除的副本保留现状。
 
-`map.md` 列出规范入口，routes.json 增量合并路径映射。优先识别 config.yaml 的普通 block-style `packages/<name>/path` 声明；否则从 index.md 和 directory-structure.md 提取实际存在的路径，明确标记为文档引用、范围待核对。不会仅根据 backend/frontend 名字推断目录。没有证据的规范只列入导航，不伪造路由。已有用户地图、路由及导入地图不会整体重建覆盖。
+`map.md` 列出规范入口，routes.json 增量合并路径映射。优先识别 config.yaml 的普通 block-style `packages/<name>/path` 声明；否则从 index.md 和 directory-structure.md 提取实际存在的路径，明确标记为文档引用、范围待核对。不会仅根据 backend/frontend 名字推断目录。没有证据的规范只列入导航，不伪造路由。已有用户地图、路由及导入地图不会整体重建覆盖；重复迁移只为本次新复制的规范入口追加导航，不会恢复用户已改名或删除的地图条目。已记录的语义审核状态和下一步不会被重置。
 
-旧 workflow、delegation、validation 等执行方法不迁移为现行规则。`migration/trellis-report.json` 记录复制映射、范围依据、缺失副本、残余旧路径、归档位置和实际删除结果。退役检查另外扫描项目代码及配置的字面引用，但不能证明动态路径或项目外部工具没有依赖；存在这类依赖时使用 `--keep-trellis`。历史记录中的旧路径不是执行依赖。
+旧 workflow、delegation、validation 等执行方法不迁移为现行规则。`migration/trellis-report.json` 记录复制映射、范围依据、缺失副本、残余旧路径、归档位置和实际删除结果。退役检查另外扫描项目代码及配置的字面引用。Git 仓库中只扫描已跟踪和未忽略的文件，以及即使被忽略也会被宿主加载的 AGENTS/CLAUDE 与 .agents/.claude/.codex/.pi 等配置；Git 忽略的构建/证据输出和嵌套仓库（含子模块）不阻止退役。嵌套仓库需在各自仓库内单独迁移。该检查不能证明动态路径或项目外部工具没有依赖；存在这类依赖时使用 `--keep-trellis`。历史记录中的旧路径不是执行依赖。
 
-默认 CLI 输出面向人阅读；自动化脚本应增加 `--json`，读取单个结果对象。`--verbose` 展开文件及提示清单。重定向、`NO_COLOR` 和 `TERM=dumb` 不输出颜色。
+默认 CLI 输出面向人阅读；自动化脚本应增加 `--json`，读取单个结果对象。`--verbose` 展开文件及提示清单。重定向、`NO_COLOR` 和 `TERM=dumb` 不输出颜色；`TERM=dumb` 或 `NEO_TRELLIS_ASCII=1` 使用纯 ASCII 符号。输出按 PLAN/MIGRATION/PROGRESS/RESULT 分节。
 
 ## 更新与验证
 

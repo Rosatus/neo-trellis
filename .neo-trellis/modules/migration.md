@@ -25,3 +25,13 @@
 2026-10-21 完整归档：用户确认将 .trellis 完整压缩到项目内 .neo-trellis-backups/ 后整体删除，取代旧版逐项移除 workflow/scripts 的方式。planMigration 记录源快照；applyPlan 在任何内容改写前生成 ZIP、清单和哈希并校验，再应用集成和知识写入。retirement.mjs 扫描现行代码/配置引用及知识残余依赖；存在阻碍则保留原目录。删除前重新检查源快照和归档，部分删除失败会从归档补回缺失文件。--keep-trellis 显式保留原目录。标准 ZIP 不支持 ZIP64，超限停止而不删除源。旧版迁移备份仍须保留。外部工具与动态路径无法由静态审计证明安全。
 
 验证：test/archive.test.mjs 覆盖哈希/目录/Unicode/附件恢复、损坏拒绝、源变化阻止、写入回滚、删除失败恢复；test/cli.test.mjs 覆盖默认可读输出、JSON 和真实归档迁移。
+
+2026-10-21 实际迁移反馈（unicorn 及 Xia/BattleKernel 子模块）后修正：
+- retirement.mjs 在 Git 仓库根使用 ls-files 只扫描已跟踪及未忽略文件，另行扫描宿主配置目录（即使被忽略也会加载）；嵌套仓库/子模块完全排除，planMigration 在 notes 列出并提示未忽略且含 .trellis 的仓库单独迁移。非 Git 目录退回全量遍历。
+- 任务路径：已导入 PRD 的归档前别名 .trellis/tasks/<名称> 映射到 PRD 副本；只有确实复制到 history/tasks 的任务包才建立映射，未知路径不再被猜到不存在的 history/tasks。
+- 字面路径改写只作用于 modules/spec/research；PRD 与 history 正文保留历史原文，仅修正 Markdown 链接。
+- 上游 Thinking Guides 与全部为 “(To be filled by the team)” 的模板目录进入 history/trellis-guides、history/trellis-spec-templates，不进地图和路由；legacy.md 标明非现行契约。
+- 重复迁移只为本次新复制的 spec index 追加地图行，保留已记录的 semanticReview/next；legacy.md 链接存在的 semantic-review.md。
+- .codex/config.toml 删除的 Trellis 设置在预览 notes 中列出；doctor 结构化问题可读输出；生成 SKILL.md 无尾随空行。
+
+验证：test/archive.test.mjs 覆盖 Git 忽略输出、子模块与被忽略宿主配置；test/migrate-knowledge.test.mjs 覆盖任务别名、历史正文、模板分类和重复迁移保留整理结果。
