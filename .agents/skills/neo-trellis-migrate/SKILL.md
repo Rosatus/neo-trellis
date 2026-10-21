@@ -1,15 +1,41 @@
 ---
 name: neo-trellis-migrate
-description: Migrate an original Trellis project or finish its post-import knowledge cleanup. Classify module knowledge and global contracts, repair routes and references, preserve evidence, and assess retirement of the old directory. Use for migration work, not ordinary development or automatic resumption of old tasks.
+description: Use when the user requests migration from original Trellis, post-import knowledge cleanup, a migration completeness audit, or assessment of whether .trellis can be retired. Handle import prerequisites before semantic cleanup. Do not trigger merely because legacy files exist, during ordinary development, or to resume imported tasks.
 ---
 
-# Finish a Trellis migration
+# Migrate and review a Trellis project
 
-Use for a requested Trellis migration or semantic cleanup after the CLI has
-copied the files. This is a one-time maintenance skill, not a daily workflow.
-Respect preview-only requests. Do not resume imported PRDs automatically.
+Use for a requested original Trellis migration, post-import cleanup,
+completeness audit, or assessment of whether .trellis can be retired.
+Legacy files alone do not trigger this skill. Do not resume imported PRDs.
 
-Read .neo-trellis/migration/trellis-report.json, map.md and routes.json first.
+## Choose the entry point
+
+Determine the target project and whether the user requests changes or only
+preview/audit. For read-only requests, report findings without importing,
+reorganizing files, or writing review notes.
+
+- Before import: the map and migration report may not exist. Inspect the
+  original .trellis and host configuration to identify the project and needed
+  supported integrations (Codex, Claude, Pi); do not install all by default.
+  Use the available neo-trellis CLI, or npx neo-trellis if not installed.
+  Run neo-trellis migrate --cwd <project> with the selected --codex, --claude,
+  and/or --pi flags to preview. Review its removals, backups and warnings.
+  If applying migration is already authorized, rerun with --yes; otherwise
+  deliver the preview. Do not use init as a substitute for migration.
+- After import: read .neo-trellis/migration/trellis-report.json, map.md and
+  routes.json, then perform the requested cleanup or audit below. Do not
+  rerun import merely to review existing results. If a report is missing in
+  an apparently migrated project, inspect the ledgers and current files;
+  report the evidence gap instead of assuming a fresh import is needed.
+
+If the CLI fails, resolve or report that failure before claiming import
+success. A preview-only request ends with the preview; it does not proceed
+to semantic edits. Ask only for unresolved choices, not authorization already
+given in the conversation.
+
+## Review imported knowledge
+
 CLI copying is not semantic completion. Source paths and import ledgers are
 provenance, never a second set of rules to maintain.
 

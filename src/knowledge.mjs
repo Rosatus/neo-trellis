@@ -41,16 +41,19 @@ navigation view over the same knowledge.
 
 ## Product requirements
 
-When receiving a PRD or product feature brief, follow
+When receiving a PRD or a request to clarify and document product scope, follow
 \`.neo-trellis/skills/prd.md\` (the neo-trellis-prd skill): grill first,
 present the complete PRD for user confirmation, then persist and implement
 authorized work. Archive only after verifying its acceptance criteria.
 PRDs live in \`.neo-trellis/prds/\`; load only the one relevant to the current
-task. Ordinary small fixes do not require this process.
+task. Also use this skill to revise, implement, verify or archive an identified
+PRD, reusing settled decisions and confirmation. Ordinary fixes, questions and
+implementation tasks without PRD intent or an existing PRD do not require it.
 
 ## Knowledge layers
 
-For Trellis migration or post-import cleanup, follow the neo-trellis-migrate
+For requested Trellis migration, post-import cleanup or retirement audits,
+follow the neo-trellis-migrate
 skill at \`.neo-trellis/skills/migrate.md\`. Normal development uses map.md
 directly; import reports are provenance, not an additional knowledge hierarchy.
 

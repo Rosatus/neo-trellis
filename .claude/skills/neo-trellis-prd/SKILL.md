@@ -1,13 +1,17 @@
 ---
 name: neo-trellis-prd
-description: Clarify a user PRD or product feature brief through a focused grill interview, obtain confirmation, persist the agreed PRD, implement authorized work, and archive it after verified completion. Use also when revising, resuming, or completing that PRD; ordinary small fixes do not need a PRD.
+description: Develop and maintain a confirmed PRD when the user provides a PRD or asks to clarify and document a product idea or feature scope. Also use when revising, implementing, verifying, archiving, cancelling, or superseding an identified PRD. Reuse settled decisions. Do not impose a PRD process on ordinary fixes, questions, or implementation tasks without PRD intent or an existing PRD.
 ---
 
 # PRD: clarify, confirm, implement, archive
 
-Use for a user-provided PRD, feature brief, or request to turn a product idea
-into an agreed implementation scope; also use when continuing or completing
-that PRD. Do not impose a PRD interview on ordinary small fixes or questions.
+Use for a user-provided PRD or a request to clarify and document a product
+idea or feature scope. Also use when revising, implementing, verifying,
+archiving, cancelling, or superseding an identified PRD. A feature request
+alone does not require a PRD interview: ordinary implementation tasks,
+fixes, and questions without PRD intent or an existing PRD stay lightweight.
+Enter at the relevant lifecycle step; reuse existing confirmation and do not
+restart an interview merely to verify or archive an agreed PRD.
 Respond in the user's language. No extra CLI or external skill is required.
 
 ## 1. Grill before committing requirements

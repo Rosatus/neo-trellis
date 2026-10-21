@@ -1,6 +1,6 @@
 ---
 name: neo-trellis
-description: Project knowledge navigation. Load the map, follow routes to module knowledge, keep knowledge honest when code changes. Use when starting work in a neo-trellis project, when unsure which files or constraints apply, or when a change invalidates recorded knowledge.
+description: Navigate and maintain scoped knowledge in projects using .neo-trellis. Use when starting or resuming project work, entering a new code area, building the initial map, receiving an evidence-backed correction, or finishing changes that may affect recorded knowledge. Load only relevant module knowledge and contracts; keep map and routes consistent.
 ---
 
 # Neo-Trellis
