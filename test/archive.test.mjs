@@ -7,6 +7,7 @@ import { snapshotTree, createArchive, verifyArchive } from '../src/archive.mjs';
 import { planMigration } from '../src/migrate.mjs';
 import { planInstall } from '../src/install.mjs';
 import { applyPlan } from '../src/storage.mjs';
+import { spawnSync } from 'node:child_process';
 
 function setup(t) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'neo-archive-'));
@@ -124,4 +125,26 @@ test('partial source deletion failure restores missing files from verified archi
   assert.equal(result.retired, false);
   assert.ok(result.blockers.some(x => x.includes('restored')));
   assert.equal(fs.readFileSync(path.join(root, '.trellis/workflow.md'), 'utf8'), 'original workflow');
+});
+
+test('retirement ignores Git-ignored output and nested repositories but not local host config', t => {
+  const root = setup(t);
+  const git = (...args) => spawnSync('git', args, { cwd: root, encoding: 'utf8' });
+  if (git('init', '-q').status !== 0) { t.skip('git unavailable'); return; }
+  put(root, '.gitignore', 'artifacts/\n');
+  put(root, 'artifacts/copied/.agents/skills/trellis-old/SKILL.md', 'python .trellis/scripts/run.py');
+  put(root, 'vendor/lib/.git/HEAD', 'ref: refs/heads/main\n');
+  put(root, 'vendor/lib/.agents/skills/neo-trellis-migrate/SKILL.md', 'mentions .trellis/');
+  put(root, '.gitmodules', '[submodule "vendor/lib"]\n\tpath = vendor/lib\n');
+  const pending = plan(root);
+  assert.ok(pending.notes.some(n => n.includes('Nested repositories excluded') && n.includes('vendor/lib')));
+  const result = applyPlan(root, pending);
+  assert.deepEqual(result.blockers, []);
+  assert.equal(result.retired, true);
+  const other = setup(t);
+  if (spawnSync('git', ['init', '-q'], { cwd: other }).status !== 0) return;
+  put(other, '.gitignore', '.codex/\n');
+  put(other, '.codex/config.toml', 'command = "python .trellis/scripts/run.py"\n');
+  const blocked = applyPlan(other, plan(other));
+  assert.ok(blocked.blockers.some(x => x.includes('.codex/config.toml')));
 });

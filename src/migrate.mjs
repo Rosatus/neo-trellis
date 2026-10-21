@@ -34,9 +34,11 @@ import {
   readFileSync,
 } from "node:fs";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 import { planPrdImports } from './migrate-prds.mjs';
 import { planKnowledgeImports } from './migrate-knowledge.mjs';
 import { snapshotTree } from './archive.mjs';
+import { nestedRepositories } from './retirement.mjs';
 
 /** Hook script basenames emitted by classic Trellis per platform. */
 const TRELLIS_HOOK_SCRIPTS = [
@@ -757,7 +759,14 @@ export function planMigration(root, { keepTrellis = false } = {}) {
   for (const tomlRel of [".codex/config.toml"]) {
     const content = readText(root, tomlRel);
     if (content === null) continue;
-    writeOrRemove(tomlRel, scrubCodexConfigToml(content));
+    const res = scrubCodexConfigToml(content);
+    if (res) {
+      const kept = new Set(res.content.split("\n").map((l) => l.trim()));
+      const dropped = content.split("\n").map((l) => l.trim())
+        .filter((l) => l && !l.startsWith("#") && !kept.has(l));
+      notes.push(`${tomlRel}: removing Trellis-owned settings: ${dropped.join("; ")}`);
+    }
+    writeOrRemove(tomlRel, res);
   }
 
   // 6b. Report platform integrations this migrator does not handle so the
@@ -795,6 +804,15 @@ export function planMigration(root, { keepTrellis = false } = {}) {
   // navigation and audit unresolved references. Original sources stay intact.
   const prds = planPrdImports(root, plan);
   planKnowledgeImports(root, plan, prds);
+
+  // Nested repositories own their own instructions and Trellis lifecycle.
+  const nested = nestedRepositories(root);
+  const ignoredByGit = (repo) => spawnSync("git", ["check-ignore", "-q", repo], { cwd: root }).status === 0;
+  const nestedTrellis = nested.filter((repo) => existsSync(path.join(root, repo, ".trellis")) && !ignoredByGit(repo));
+  if (nested.length) {
+    notes.push(`Nested repositories excluded from this migration and retirement scan: ${nested.join(", ")}` +
+      (nestedTrellis.length ? `; migrate separately inside: ${nestedTrellis.join(", ")}` : ""));
+  }
 
   notes.push(
     `Trellis evidence: ${trellisEvidence.join(", ")}`,
