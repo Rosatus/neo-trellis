@@ -106,8 +106,11 @@ export function applyPlan(root, plan, { onProgress = () => {} } = {}) {
   if (plan.retirement) {
     const reportPath = safePath(root, '.neo-trellis/migration/trellis-report.json');
     const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+    const reviewed = typeof report.semanticReview === 'string' && !report.semanticReview.startsWith('pending');
     Object.assign(report, { originalDirectoryDeleted: retired, archive, retirementBlockers: blockers,
-      next: 'Review imported scopes with neo-trellis-migrate; run neo-trellis doctor.' });
+      next: reviewed
+        ? (retired ? 'Semantic review already recorded; run neo-trellis doctor.' : report.next)
+        : 'Review imported scopes with neo-trellis-migrate; run neo-trellis doctor.' });
     fs.writeFileSync(reportPath, JSON.stringify(report, null, 2) + '\n');
   }
   return { backup: backupRel, changed: names.length + (retired ? 1 : 0), archive, retired, blockers };

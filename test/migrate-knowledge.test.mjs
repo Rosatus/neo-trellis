@@ -119,3 +119,51 @@ test('knowledge target collisions and symlink sources fail without writes', t =>
   assert.throws(() => importPlan(other), /symlink/i);
   assert.equal(fs.existsSync(path.join(other, '.neo-trellis')), false);
 });
+
+test('archived task aliases resolve to PRD copies; history prose is not rewritten', t => {
+  const root = fixture(t); setup(root);
+  put(root, '.trellis/tasks/archive/2026-08/old-feature/prd.md', '# Old');
+  put(root, '.trellis/tasks/archive/2026-08/old-feature/research/a.md', 'Evidence');
+  put(root, '.trellis/tasks/loose/notes.md', 'See `.trellis/tasks/old-feature/research/a.md` and `.trellis/spec/backend/index.md`.\n[a](../old-feature/research/a.md)');
+  put(root, '.trellis/spec/backend/more.md', 'See `.trellis/tasks/old-feature/research/a.md` and `.trellis/tasks/missing/x.md`.');
+  const plan = importPlan(root);
+  const records = JSON.parse(plan.writes.get('.neo-trellis/prds/trellis-imports.json')).records;
+  const archived = records.find(r => r.source.endsWith('/old-feature')).destination;
+  const current = plan.writes.get('.neo-trellis/modules/backend/more.md');
+  assert.ok(current.includes(`${archived}/research/a.md`));
+  assert.ok(current.includes('.trellis/tasks/missing/x.md'), 'unknown task paths are not guessed');
+  assert.doesNotMatch(current, /history\/tasks\/missing/);
+  const history = plan.writes.get('.neo-trellis/history/tasks/loose/notes.md').toString();
+  assert.match(history, /`\.trellis\/tasks\/old-feature\/research\/a\.md`/);
+  const [, link] = /\[a\]\(([^)]+)\)/.exec(history);
+  assert.equal(path.posix.normalize(path.posix.join('.neo-trellis/history/tasks/loose', decodeURIComponent(link))), `${archived}/research/a.md`);
+});
+
+test('upstream guides and unfilled templates go to history, not current specs or routes', t => {
+  const root = fixture(t); setup(root);
+  put(root, '.trellis/spec/guides/index.md', '# Thinking Guides\n\n> **Purpose**: Expand your thinking to catch things you might not have considered.\n');
+  put(root, '.trellis/spec/vendor/backend/index.md', "# Backend\nFill in each file with your project's specific conventions.\n[Errors](error-handling.md)\n");
+  put(root, '.trellis/spec/vendor/backend/error-handling.md', '# Errors\n(To be filled by the team)\n');
+  const plan = importPlan(root);
+  assert.ok(plan.writes.has('.neo-trellis/history/trellis-guides/index.md'));
+  assert.ok(plan.writes.has('.neo-trellis/history/trellis-spec-templates/vendor-backend/error-handling.md'));
+  assert.equal([...plan.writes.keys()].some(k => k.startsWith('.neo-trellis/spec/guides') || k.startsWith('.neo-trellis/spec/vendor')), false);
+  assert.doesNotMatch(plan.writes.get('.neo-trellis/map.md'), /trellis-guides|trellis-spec-templates/);
+  assert.match(plan.writes.get('.neo-trellis/legacy.md'), /history\/trellis-guides\/.*not current contracts/);
+});
+
+test('rerun preserves curated map entries and recorded semantic review', t => {
+  const root = fixture(t); setup(root);
+  applyPlan(root, importPlan(root));
+  put(root, '.neo-trellis/map.md', '# Curated\n\n| [Server](modules/server/index.md) | backend/ |\n');
+  const reportPath = '.neo-trellis/migration/trellis-report.json';
+  const report = JSON.parse(read(root, reportPath));
+  put(root, reportPath, JSON.stringify({ ...report, semanticReview: 'complete: see review', next: 'Nothing pending' }));
+  put(root, '.neo-trellis/migration/semantic-review.md', '# Review\n');
+  applyPlan(root, importPlan(root));
+  assert.equal(read(root, '.neo-trellis/map.md'), '# Curated\n\n| [Server](modules/server/index.md) | backend/ |\n');
+  const after = JSON.parse(read(root, reportPath));
+  assert.equal(after.semanticReview, 'complete: see review');
+  assert.equal(after.next, 'Nothing pending');
+  assert.match(read(root, '.neo-trellis/legacy.md'), /migration\/semantic-review\.md/);
+});

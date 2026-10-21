@@ -15,6 +15,31 @@ const oldReferences = text => [...new Set(text.match(/(?<![\w-])\.trellis[/\\][^
 
 function exists(root, rel) { return fs.existsSync(safePath(root, rel)); }
 
+// Upstream Trellis ships generic guides and unfilled spec templates. They are
+// useful provenance but must not become project contracts just because they
+// lived under .trellis/spec. Recognize whole directories by stable markers.
+function boilerplateRoots(root) {
+  const result = [];
+  if (!exists(root, '.trellis/spec')) return result;
+  const files = filesIn(root, '.trellis/spec');
+  const dirs = new Set([...files.keys()].filter(name => name.endsWith('/index.md')).map(name => name.slice(0, -'/index.md'.length)));
+  for (const dir of [...dirs].sort()) {
+    const index = files.get(`${dir}/index.md`).toString('utf8');
+    const members = [...files].filter(([name]) => name.startsWith(dir + '/'));
+    const markdown = members.filter(([name]) => name.endsWith('.md'));
+    const source = `.trellis/spec/${dir}`;
+    if (dir.split('/').pop() === 'guides' && /^# Thinking Guides\b/m.test(index) &&
+        index.includes('Expand your thinking to catch things you might not have considered')) {
+      result.push([source, `.neo-trellis/history/trellis-guides${dir === 'guides' ? '' : '/' + dir.slice(0, -'/guides'.length).replace(/\//g, '-')}`]);
+    } else if (index.includes("Fill in each file with your project's specific conventions") &&
+        markdown.length === members.length &&
+        markdown.every(([name, data]) => name === `${dir}/index.md` || data.toString('utf8').includes('(To be filled by the team)'))) {
+      result.push([source, `.neo-trellis/history/trellis-spec-templates/${dir.replace(/\//g, '-')}`]);
+    }
+  }
+  return result.filter(([source]) => !result.some(([other]) => other !== source && source.startsWith(other + '/')));
+}
+
 // This recognizes only the ordinary block-style packages/name/path subset.
 // Unrecognized YAML is not executed or guessed; document references remain a
 // conservative discovery fallback, explicitly labeled as references, not ownership.
@@ -33,7 +58,7 @@ function packagePaths(text) {
   return result;
 }
 
-function buildNavigation(root, plan, mappings) {
+function buildNavigation(root, plan, mappings, fresh) {
   const routesPath = '.neo-trellis/routes.json';
   const raw = read(root, routesPath);
   const routes = raw ? JSON.parse(raw) : { version: 1, routes: [] };
@@ -43,6 +68,8 @@ function buildNavigation(root, plan, mappings) {
   let changed = false;
   for (const [source, destination] of mappings) {
     if (!source.startsWith('.trellis/spec/') || !source.endsWith('/index.md')) continue;
+    // Historical guides/templates stay discoverable via legacy.md, not routes.
+    if (destination.startsWith('.neo-trellis/history/')) continue;
     if (!plan.writes.has(destination) && !exists(root, destination)) continue;
     const scope = source.slice('.trellis/spec/'.length, -'/index.md'.length);
     const declared = packages.get(scope.split('/')[0]);
@@ -74,7 +101,9 @@ function buildNavigation(root, plan, mappings) {
   if (!raw || changed) plan.writes.set(routesPath, JSON.stringify(routes, null, 2) + '\n');
   const mapPath = '.neo-trellis/map.md';
   const map = read(root, mapPath) ?? '# Project map\n';
-  const rows = entries.filter(e => !map.includes(`](${e.destination.slice('.neo-trellis/'.length)})`));
+  // Re-running migration must not re-add scopes a curated map deliberately
+  // renamed or removed; only newly imported indexes are proposed.
+  const rows = entries.filter(e => fresh.has(e.source) && !map.includes(`](${e.destination.slice('.neo-trellis/'.length)})`));
   if (rows.length || !exists(root, mapPath)) {
     const nav = ['## Knowledge scopes', '',
       'Contracts remain binding. Document references are initial discovery routes;',
@@ -108,7 +137,8 @@ export function planKnowledgeImports(root, plan, prds) {
     ledger.records.push({ source, destination, fingerprint: digest(data) });
   };
   const packages = packagePaths(read(root, '.trellis/config.yaml') ?? '');
-  const specRoots = [];
+  const boilerplate = boilerplateRoots(root);
+  const specRoots = [...boilerplate];
   if (exists(root, '.trellis/spec')) for (const name of fs.readdirSync(safePath(root, '.trellis/spec'))) {
     const source = `.trellis/spec/${name}`;
     if (fs.statSync(safePath(root, source)).isDirectory() &&
@@ -116,6 +146,7 @@ export function planKnowledgeImports(root, plan, prds) {
       specRoots.push([source, `.neo-trellis/modules/${name}`]);
     }
   }
+  specRoots.sort((a, b) => b[0].length - a[0].length);
   for (const [sourceRoot, targetRoot] of ROOTS) {
     if (!exists(root, sourceRoot)) continue;
     for (const [name, data] of filesIn(root, sourceRoot)) {
@@ -135,8 +166,17 @@ export function planKnowledgeImports(root, plan, prds) {
       else copy(source, `.neo-trellis/history/tasks/${name}`, data);
     }
   }
-  const roots = [...specRoots, ...ROOTS, ...prds.records.map(r => [r.source, r.destination]),
-    ['.trellis/tasks', '.neo-trellis/history/tasks']].sort((a, b) => b[0].length - a[0].length);
+  // Trellis archives tasks after they were referenced by their active path.
+  // Resolve both spellings to the PRD destination; unknown task paths remain
+  // unresolved instead of being rewritten to a guessed history location.
+  const taskAliases = prds.records.flatMap(r => {
+    const alias = `.trellis/tasks/${path.posix.basename(r.source)}`;
+    return alias === r.source ? [] : [[alias, r.destination]];
+  });
+  const taskBundles = [...new Set(ledger.records.filter(r => r.source.startsWith('.trellis/tasks/'))
+    .map(r => r.source.split('/').slice(0, 3).join('/')))].map(source => [source, `.neo-trellis/history/tasks/${source.slice('.trellis/tasks/'.length)}`]);
+  const roots = [...specRoots, ...ROOTS, ...prds.records.map(r => [r.source, r.destination]), ...taskAliases, ...taskBundles]
+    .sort((a, b) => b[0].length - a[0].length);
   const remap = value => {
     if (mappings.has(value)) return mappings.get(value);
     for (const [from, to] of roots) if (value === from || value.startsWith(from + '/')) return to + value.slice(from.length);
@@ -148,9 +188,9 @@ export function planKnowledgeImports(root, plan, prds) {
     if (!textual(source)) continue;
     let text = data.toString('utf8');
     if (source.endsWith('.md')) text = relocateLinks(text, source, destination, path.posix.dirname(source), plan.notes, remap);
-    // Rewrite only literal project-relative references to copied trees. Old
-    // scripts/workflow/policies deliberately have no successor and are reported.
-    for (const reference of oldReferences(text).sort((a, b) => b.length - a.length)) {
+    // Current knowledge gets literal paths rewritten to verified copies. History
+    // and PRD evidence keep their original prose; links are still made usable.
+    if (/^\.neo-trellis\/(?:modules|spec|research)\//.test(destination)) for (const reference of oldReferences(text).sort((a, b) => b.length - a.length)) {
       const target = remap(reference);
       if (target !== reference) text = text.split(reference).join(target);
     }
@@ -165,7 +205,10 @@ export function planKnowledgeImports(root, plan, prds) {
     if (references.length) remaining.push({ file: destination,
       category: /^\.neo-trellis\/(modules|spec)\//.test(destination) ? 'current-knowledge' : 'historical-record', references });
   }
-  const scopes = buildNavigation(root, plan, mappings);
+  const scopes = buildNavigation(root, plan, mappings, fresh);
+  let previousReport = {};
+  try { previousReport = JSON.parse(read(root, REPORT) ?? '{}'); } catch { previousReport = {}; }
+  const reviewed = typeof previousReport.semanticReview === 'string' && !previousReport.semanticReview.startsWith('pending');
   const report = { version: 1, scope: 'Copied knowledge and task documents; not a whole-repository deletion-safety proof',
     mappings: [...mappings].sort(([a], [b]) => a.localeCompare(b, 'en')).map(([source, destination]) => ({ source, destination })), scopes,
     remainingReferences: remaining, changedSourcesNotOverwritten: skippedUpdates,
@@ -174,8 +217,10 @@ export function planKnowledgeImports(root, plan, prds) {
     discardedWorkflow: ['.trellis/workflow.md', '.trellis/scripts/', '.trellis/agents/', '.trellis/config.yaml',
       '.trellis/delegation.md', '.trellis/validation.md', '.trellis/customization.md'],
     originalDirectoryDeleted: false,
-    semanticReview: 'pending: use neo-trellis-migrate to review scope, global contracts and obsolete references',
-    next: 'Retire old platform integrations and review remaining references before deleting .trellis. Old workflow references are historical, not instructions to restore it.' };
+    // A rerun must not discard the recorded human/agent semantic review.
+    semanticReview: reviewed ? previousReport.semanticReview : 'pending: use neo-trellis-migrate to review scope, global contracts and obsolete references',
+    next: reviewed && typeof previousReport.next === 'string' ? previousReport.next
+      : 'Retire old platform integrations and review remaining references before deleting .trellis. Old workflow references are historical, not instructions to restore it.' };
   if (ledger.records.length) plan.writes.set(LEDGER, JSON.stringify(ledger, null, 2) + '\n');
   plan.writes.set(REPORT, JSON.stringify(report, null, 2) + '\n');
   plan.writes.set('.neo-trellis/legacy.md', [
@@ -184,8 +229,10 @@ export function planKnowledgeImports(root, plan, prds) {
     'Use the neo-trellis copies as the maintained source. The migration report records',
     'whether the original directory was retained or retired into a verified ZIP backup.', '',
     ...ROOTS.filter(([from]) => exists(root, from)).map(([, to]) => `- [${to.slice('.neo-trellis/'.length)}/](${to.slice('.neo-trellis/'.length)}/)`),
+    ...boilerplate.map(([from, planned]) => [from, path.posix.dirname(mappings.get(`${from}/index.md`) ?? `${planned}/index.md`)]).map(([from, to]) => `- [${to.slice('.neo-trellis/'.length)}/](${to.slice('.neo-trellis/'.length)}/) — upstream Trellis ${to.includes('/trellis-guides') ? 'thinking guides' : 'unfilled spec templates'} from ${from}; not current contracts.`),
     '- [Project map](map.md)',
     '- [Migration report and source mappings](migration/trellis-report.json)',
+    ...(exists(root, '.neo-trellis/migration/semantic-review.md') ? ['- [Semantic review](migration/semantic-review.md)'] : []),
     ...(prds.records.length ? ['- [PRD import ledger](prds/trellis-imports.json) — requirements and historical status; acceptance unverified.'] : []),
     ...(ledger.records.some(r => r.destination.startsWith('.neo-trellis/history/tasks/')) ? ['- [Unclassified task evidence](history/tasks/) — not automatically a PRD.'] : []), '',
     'The old workflow, agent delegation and validation policies are retired, not migrated',

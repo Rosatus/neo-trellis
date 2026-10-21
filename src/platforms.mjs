@@ -21,8 +21,7 @@ description: Navigate and maintain scoped knowledge in projects using .neo-trell
 
 # Neo-Trellis
 
-${KNOWLEDGE_SKILL}
-`;
+${KNOWLEDGE_SKILL}`;
 
 // ---------------------------------------------------------------------------
 // Self-contained session hook runtime. Copied verbatim into the host project;
