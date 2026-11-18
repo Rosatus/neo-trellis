@@ -5,6 +5,7 @@
 
 import { KNOWLEDGE_SKILL } from "./knowledge.mjs";
 import { PRD_SKILL, PRD_SKILL_MD } from "./prd.mjs";
+import { PLAN_SKILL, PLAN_SKILL_MD } from "./plan.mjs";
 import { MIGRATION_SKILL, MIGRATION_SKILL_MD } from './migration-skill.mjs';
 
 const RUNTIME_PATH = ".neo-trellis/runtime/session.mjs";
@@ -16,7 +17,7 @@ const HOOK_COMMAND = `node ${RUNTIME_PATH}`;
 // ---------------------------------------------------------------------------
 const SKILL_MD = `---
 name: neo-trellis
-description: Navigate and maintain scoped knowledge in projects using .neo-trellis. Use when starting or resuming project work, entering a new code area, building the initial map, receiving an evidence-backed correction, or finishing changes that may affect recorded knowledge. Load only relevant module knowledge and contracts; keep map and routes consistent.
+description: Navigate and maintain scoped knowledge in projects using .neo-trellis. Use when starting or resuming project work, entering a new code area, building the initial map, receiving an evidence-backed correction, or finishing changes that may affect recorded knowledge. Locate plans when relevant to the current work.
 ---
 
 # Neo-Trellis
@@ -171,6 +172,8 @@ export function platformFiles(platform) {
   }
   const files = {
     [skillPath]: SKILL_MD,
+    [skillPath.replace('/neo-trellis/', '/neo-trellis-plan/')]: PLAN_SKILL_MD,
+    '.neo-trellis/skills/plan.md': PLAN_SKILL,
     [skillPath.replace('/neo-trellis/', '/neo-trellis-prd/')]: PRD_SKILL_MD,
     '.neo-trellis/skills/prd.md': PRD_SKILL,
     [skillPath.replace('/neo-trellis/', '/neo-trellis-migrate/')]: MIGRATION_SKILL_MD,

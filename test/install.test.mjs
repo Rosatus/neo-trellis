@@ -4,8 +4,9 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { planInstall } from '../src/install.mjs';
-import { applyPlan, read, safePath } from '../src/storage.mjs';
+import { applyPlan, digest, read, safePath } from '../src/storage.mjs';
 import { PRD_SKILL_MD, PRD_SKILL } from '../src/prd.mjs';
+import { PLAN_SKILL_MD, PLAN_SKILL } from '../src/plan.mjs';
 import { MIGRATION_SKILL_MD } from '../src/migration-skill.mjs';
 
 function fixture(t) { const root = fs.mkdtempSync(path.join(os.tmpdir(), 'neo-install-')); t.after(() => fs.rmSync(root, { recursive: true, force: true })); return root; }
@@ -40,6 +41,39 @@ test('install preserves custom instructions and hooks, rerun is idempotent', t =
   assert.equal(config.env.CUSTOM, '1');
   assert.equal(config.hooks.SessionStart[0].hooks[0].command, 'echo custom');
   assert.equal(applyPlan(root, planInstall(root, ['claude'])).changed, 0);
+});
+test('upgrading a PRD-only installation adds planning and preserves ongoing delivery records', t => {
+  const root = fixture(t);
+  const records = {
+    '.neo-trellis/plans/catalog/plan.md': '# Catalog\nSlice S1 → catalog-import\n',
+    '.neo-trellis/prds/active/catalog-import/prd.md': '# Import\nParent: catalog / S1\n',
+    '.neo-trellis/prds/archive/catalog-init/prd.md': '# Initialize\nStatus: completed\n',
+  };
+  const prdPath = '.agents/skills/neo-trellis-prd/SKILL.md';
+  const oldSkill = '# Previously installed PRD workflow\n';
+  const manifest = { version: 1, platforms: ['codex'], managed: { [prdPath]: digest(oldSkill) } };
+  for (const [file, text] of Object.entries({ ...records, [prdPath]: oldSkill, '.neo-trellis/manifest.json': JSON.stringify(manifest) })) {
+    fs.mkdirSync(path.dirname(path.join(root, file)), { recursive: true });
+    fs.writeFileSync(path.join(root, file), text);
+  }
+
+  applyPlan(root, planInstall(root, ['claude', 'pi']));
+  for (const host of ['.agents', '.claude', '.pi']) {
+    assert.equal(read(root, `${host}/skills/neo-trellis-plan/SKILL.md`), PLAN_SKILL_MD);
+  }
+  assert.equal(read(root, '.neo-trellis/skills/plan.md'), PLAN_SKILL);
+  assert.equal(read(root, prdPath), PRD_SKILL_MD);
+  for (const router of ['AGENTS.md', 'CLAUDE.md']) {
+    assert.ok(read(root, router).includes('.neo-trellis/skills/plan.md'));
+  }
+  assert.equal(applyPlan(root, planInstall(root, ['codex'])).changed, 0);
+  const { managed } = JSON.parse(read(root, '.neo-trellis/manifest.json'));
+  for (const [file, text] of Object.entries(records)) {
+    assert.equal(read(root, file), text);
+    assert.equal(managed[file], undefined);
+  }
+  fs.appendFileSync(path.join(root, '.neo-trellis/skills/plan.md'), 'Local workflow');
+  assert.throws(() => planInstall(root, ['codex']), /Locally modified integration/);
 });
 test('knowledge is preserved while modified managed code blocks refresh', t => {
   const root = fixture(t);

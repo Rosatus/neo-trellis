@@ -13,3 +13,5 @@
 2026-10-21 触发边界补充：知识 skill 覆盖新模块、首次建图、纠正和收尾；PRD skill 用于需求沉淀意图或已识别 PRD 的生命周期，普通功能实现不自动进入采访。description、正文和通用路由保持一致。hook 只注入导航入口，不调用 skill。
 
 验证：test/platforms.test.mjs 用真实 Node 子进程模拟宿主输入。实际宿主加载、信任与批准状态仍需实际会话验证。
+
+2026-11-18 项目计划：`src/plan.mjs` 提供 `neo-trellis-plan` 及内部回退入口 `.neo-trellis/skills/plan.md`。计划在 `plans/<id>/plan.md`，属于用户内容。渐进/完整决定澄清深度，实施边界由用户授权单独决定。PRD 以父计划 ID 和条目 ID 反向关联，计划用稳定 PRD ID 核对 active/archive 中的证据并修复中断回写。单项交付后仍需产品场景通过才能完成计划。独立 PRD 沿用原流程。安装升级验证见 `test/install.test.mjs`。

@@ -24,6 +24,13 @@ they apply, and keep `map.md` and `routes.json` consistent — routes.json
 is the machine authority for code-scope mapping, the map is the human/agent
 navigation view over the same knowledge.
 
+## Project plans
+
+For a multi-feature project plan, follow neo-trellis-plan at
+`.neo-trellis/skills/plan.md`. Plans live in `.neo-trellis/plans/<id>/plan.md`.
+Use it to split a goal, list plans, read progress, or update and continue the
+identified plan within its execution scope. Load plans on demand.
+
 ## Product requirements
 
 When receiving a PRD or a request to clarify and document product scope, follow

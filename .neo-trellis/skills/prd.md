@@ -9,6 +9,11 @@ Enter at the relevant lifecycle step; reuse existing confirmation and do not
 restart an interview merely to verify or archive an agreed PRD.
 Respond in the user's language. No extra CLI or external skill is required.
 
+If clarification reveals independently deliverable outcomes, suggest splitting
+the goal with neo-trellis-plan at `.neo-trellis/skills/plan.md`. For a named
+slice, read its parent plan, shared contracts and direct dependencies. Reuse
+the decisions already settled there. Standalone PRDs need no plan.
+
 ## 1. Grill before committing requirements
 
 Read the project map and relevant scoped knowledge, then inspect the code
@@ -49,6 +54,11 @@ Do not infer confirmation from elapsed time or a generic earlier request to
 develop. An explicit confirmation of this exact PRD already in the conversation
 counts; never ask for the same approval twice.
 
+For a planned slice, identify the parent plan ID and slice ID in the PRD. An
+exact revision reviewed and confirmed in a group of PRDs has already passed
+this step. Use the execution scope recorded for that revision to decide
+whether to implement it now.
+
 Use this compact structure, omitting irrelevant optional details:
 
 - Title, stable ID, Status, revision, and confirmation evidence (user statement
@@ -68,6 +78,10 @@ and never overwrite a different PRD. Create directories only as needed.
 If there was a draft, reconcile it into the confirmed file and remove the
 obsolete draft only after verifying preservation of its decisions and content.
 Read back the file and report its path. Treat its requirements as a contract.
+
+For linked PRDs, reserve the stable PRD ID in the plan before writing, then
+update the existing slice row after confirmation or revision. Apply the plan
+skill's full-set readiness and dependency checks before implementation.
 
 If implementation is already authorized, continue immediately. If the user
 only requested a PRD, stop after delivering the file. Confirmation of a
@@ -108,3 +122,9 @@ and the archival failure separately; never claim the archive exists.
 Cancellation/supersession is not completion. Only archive it as cancelled or
 superseded when the user explicitly chooses that outcome, retaining the reason
 and successor link if applicable. Report the final archive path to the user.
+
+After a linked PRD changes state, refresh its parent row from the verified
+PRD, preserving the distinction between completed, cancelled and superseded.
+If writeback was interrupted, resolve the same ID in active/archive on the
+next plan read. Continue with the next eligible slice only within existing
+authorization. The plan records separate end-to-end acceptance evidence.

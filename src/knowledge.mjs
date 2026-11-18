@@ -39,6 +39,13 @@ they apply, and keep \`map.md\` and \`routes.json\` consistent — routes.json
 is the machine authority for code-scope mapping, the map is the human/agent
 navigation view over the same knowledge.
 
+## Project plans
+
+For a multi-feature project plan, follow neo-trellis-plan at
+\`.neo-trellis/skills/plan.md\`. Plans live in \`.neo-trellis/plans/<id>/plan.md\`.
+Use it to split a goal, list plans, read progress, or update and continue the
+identified plan within its execution scope. Load plans on demand.
+
 ## Product requirements
 
 When receiving a PRD or a request to clarify and document product scope, follow
@@ -78,6 +85,9 @@ commands the user must invoke; it happens inside normal development.
   specs that apply. Do not bulk-load all knowledge.
 - Historical research is optional detail: open it when you need the *why*,
   not as routine reading.
+- When asked about project plans, or when a PRD identifies its parent plan,
+  follow \`.neo-trellis/skills/plan.md\` for discovery, scoped reads and updates.
+  On compact/resume reload just the identified plan and current slice.
 
 ## Initializing the map
 

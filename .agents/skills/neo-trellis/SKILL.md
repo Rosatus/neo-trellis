@@ -1,6 +1,6 @@
 ---
 name: neo-trellis
-description: Navigate and maintain scoped knowledge in projects using .neo-trellis. Use when starting or resuming project work, entering a new code area, building the initial map, receiving an evidence-backed correction, or finishing changes that may affect recorded knowledge. Load only relevant module knowledge and contracts; keep map and routes consistent.
+description: Navigate and maintain scoped knowledge in projects using .neo-trellis. Use when starting or resuming project work, entering a new code area, building the initial map, receiving an evidence-backed correction, or finishing changes that may affect recorded knowledge. Locate plans when relevant to the current work.
 ---
 
 # Neo-Trellis
@@ -19,6 +19,9 @@ commands the user must invoke; it happens inside normal development.
   specs that apply. Do not bulk-load all knowledge.
 - Historical research is optional detail: open it when you need the *why*,
   not as routine reading.
+- When asked about project plans, or when a PRD identifies its parent plan,
+  follow `.neo-trellis/skills/plan.md` for discovery, scoped reads and updates.
+  On compact/resume reload just the identified plan and current slice.
 
 ## Initializing the map
 
@@ -83,4 +86,3 @@ must be marked is anything presented as *current* that is no longer true.
 - clear: load only the project knowledge entry points. Do NOT auto-resume a
   previous task; a clear may mean a fresh start. If a handoff note exists,
   mention it is available and let the user decide.
-
